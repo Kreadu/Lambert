@@ -12,7 +12,8 @@
 <body>
 <header class="topbar"><div class="wrap">
   <span class="brand" id="brand">Administrar catálogo</span>
-  <a class="muted" href="catalogo.html" target="_blank" style="margin-left:auto">Ver catálogo ↗</a>
+  <select class="input" id="storeSel" aria-label="Tienda" hidden style="width:auto;max-width:200px"></select>
+  <a class="muted" id="viewCatalog" href="catalogo.html" target="_blank" style="margin-left:auto">Ver catálogo ↗</a>
   <button class="btn" id="logout" hidden>Salir</button>
 </div></header>
 
@@ -22,13 +23,20 @@
     <h2>Ingresar</h2>
     <form id="loginForm">
       <div class="field"><label for="email">Correo</label><input class="input" id="email" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="password">Contraseña</label><input class="input" id="password" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="password">Contraseña</label><div class="pass-field"><input class="input" id="password" type="password" autocomplete="current-password" required><button type="button" data-eye aria-label="Ver contraseña" title="Ver contraseña">👁</button></div></div>
       <button class="btn btn-primary" type="submit">Ingresar</button>
       <div class="status" id="loginStatus"></div>
     </form>
   </section>
 
   <section id="notice" class="notice" hidden></section>
+
+  <nav class="filters" id="tabs" hidden>
+    <button class="chip active" type="button" data-tab="productos">Productos</button>
+    <button class="chip" type="button" data-tab="disenos">Diseños guardados</button>
+    <button class="chip" type="button" data-tab="empresa">Datos de la empresa</button>
+    <button class="chip" type="button" data-tab="tiendas" hidden>Tiendas</button>
+  </nav>
 
   <!-- Lista -->
   <section id="listPanel" class="panel" hidden>
@@ -83,6 +91,77 @@
     <div class="status" id="dStatus"></div>
     <div id="designs"></div>
     <button class="btn" type="button" id="dMore" hidden style="margin-top:8px">Ver más</button>
+  </section>
+
+  <!-- Datos de la empresa -->
+  <section id="companyPanel" class="panel" hidden>
+    <h2>Datos de la empresa</h2>
+    <p class="muted" style="margin:-4px 0 12px">Aparecen en el catálogo, en la pantalla de la tienda y en el diseñador.</p>
+    <div class="field"><label>Logo</label>
+      <div class="row" style="flex-wrap:wrap;gap:12px">
+        <div id="logoPreview" class="logo-preview"></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp">
+          <button class="btn btn-danger" type="button" id="logoDel" hidden style="align-self:flex-start">Quitar logo</button>
+          <span class="muted">PNG con fondo transparente se ve mejor.</span>
+        </div>
+      </div>
+      <div class="status" id="logoStatus"></div>
+    </div>
+    <form id="companyForm">
+      <div class="field"><label for="c-name">Nombre comercial</label><input class="input" id="c-name" required maxlength="80"></div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 220px"><label for="c-legal">Razón social</label><input class="input" id="c-legal" maxlength="120"></div>
+        <div class="field" style="flex:1 1 160px"><label for="c-tax">Identificación tributaria <span class="muted">(NIT, RUT, RFC…)</span></label><input class="input" id="c-tax" maxlength="40"></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 200px"><label for="c-country">País</label><select class="input" id="c-country"></select></div>
+        <div class="field" style="flex:1 1 140px"><label for="c-currency">Moneda de los precios</label><select class="input" id="c-currency"></select></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 220px"><label for="c-city">Ciudad</label><input class="input" id="c-city" maxlength="80"></div>
+        <div class="field" style="flex:2 1 260px"><label for="c-address">Dirección</label><input class="input" id="c-address" maxlength="160"></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 260px"><label for="c-wa">WhatsApp para cotizaciones <span class="muted">(vacío = no aparece "Hablar con un asesor")</span></label><div id="c-waSlot"></div></div>
+        <div class="field" style="flex:1 1 260px"><label for="c-phone">Teléfono</label><div id="c-phoneSlot"></div></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 220px"><label for="c-email">Correo</label><input class="input" id="c-email" type="email" maxlength="120"></div>
+        <div class="field" style="flex:1 1 220px"><label for="c-web">Sitio web</label><input class="input" id="c-web" maxlength="160" placeholder="https://"></div>
+      </div>
+      <button class="btn btn-primary" type="submit" id="companySave">Guardar datos</button>
+      <div class="status" id="companyStatus"></div>
+    </form>
+    <div class="section">Enlaces de esta tienda</div>
+    <div id="storeLinks" class="muted" style="display:flex;flex-direction:column;gap:4px"></div>
+  </section>
+
+  <!-- Tiendas (solo administradores de la plataforma) -->
+  <section id="storesPanel" class="panel" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px;flex-wrap:wrap">
+      <h2 style="margin:0">Tiendas</h2>
+      <button class="btn btn-primary" type="button" id="newStoreBtn">+ Nueva tienda</button>
+    </div>
+    <form id="newStoreForm" hidden style="border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-bottom:12px">
+      <p class="muted" style="margin-bottom:10px">Se crea la tienda con sus categorías de baño y la cuenta de su dueño. Con ese correo y contraseña entra a esta misma página y solo ve su tienda.</p>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 220px"><label for="n-name">Nombre de la tienda</label><input class="input" id="n-name" required maxlength="80"></div>
+        <div class="field" style="flex:1 1 180px"><label for="n-slug">Dirección <span class="muted">(?t=…)</span></label><input class="input" id="n-slug" required maxlength="40" pattern="[a-z0-9]+(-[a-z0-9]+)*"></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 200px"><label for="n-country">País</label><select class="input" id="n-country"></select></div>
+        <div class="field" style="flex:1 1 140px"><label for="n-currency">Moneda</label><select class="input" id="n-currency"></select></div>
+      </div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:1 1 220px"><label for="n-email">Correo del dueño</label><input class="input" id="n-email" type="email" required autocomplete="off"></div>
+        <div class="field" style="flex:1 1 220px"><label for="n-pass">Contraseña <span class="muted">(mínimo 8)</span></label>
+          <div class="pass-field"><input class="input" id="n-pass" type="password" required minlength="8" autocomplete="new-password"><button type="button" data-eye aria-label="Ver contraseña" title="Ver contraseña">👁</button></div></div>
+      </div>
+      <div class="row"><button class="btn btn-primary" type="submit" id="newStoreSave">Crear tienda</button><button class="btn" type="button" id="newStoreCancel">Cancelar</button></div>
+      <div class="status" id="newStoreStatus"></div>
+    </form>
+    <div id="storesList"></div>
   </section>
 
   <!-- Editor -->
@@ -202,14 +281,14 @@
 <script src="ilustraciones.js"></script>
 <script src="admin-importar.js"></script>
 <script>
-const { C, db, configured, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage, illustrate } = Lambert;
+const { C, db, configured, S, COUNTRIES, CURRENCIES, countryOf, useStore, renderBrand, phoneField, isoOfDial, phoneValue, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id).value.trim(); return v === "" ? null : Number(v); };
 let products = [];
 let current = null;   // producto en edición (null = nuevo)
 let listCategory = "all";
 
-document.title = `${C.storeName} · Administrar`;
+document.title = "Administrar";
 $("f-unit").addEventListener("change", () => { $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`; });
 $("f-unit").innerHTML = Object.entries(UNITS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
 function fillCategorySelect() {
@@ -219,10 +298,33 @@ function fillCategorySelect() {
 }
 fillCategorySelect();
 
+// "listPanel" = el panel principal, con sus pestañas
+const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"], empresa: ["companyPanel"], tiendas: ["storesPanel"] };
+let tab = "productos";
 function show(section) {
-  ["login", "listPanel", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
-  $("bulkPanel").hidden = $("designsPanel").hidden = section !== "listPanel";
+  const main = section === "listPanel";
+  ["login", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
+  $("tabs").hidden = !main;
+  for (const [k, ids] of Object.entries(TABS)) ids.forEach((id) => { $(id).hidden = !main || k !== tab; });
+  document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
 }
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tab]");
+  if (!b) return;
+  tab = b.dataset.tab;
+  show("listPanel");
+});
+// ojo para ver la contraseña
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-eye]");
+  if (!b) return;
+  const input = b.parentElement.querySelector("input");
+  const visible = input.type === "password";
+  input.type = visible ? "text" : "password";
+  b.textContent = visible ? "🙈" : "👁";
+  b.setAttribute("aria-label", visible ? "Ocultar contraseña" : "Ver contraseña");
+  b.title = b.getAttribute("aria-label");
+});
 function status(id, msg, kind = "") { const el = $(id); el.textContent = msg; el.className = `status ${kind}`; }
 function notice(html) { $("notice").innerHTML = html; show("notice"); }
 // cerámica = categoría "ceramica" o cualquier categoría nueva marcada como "cubre piso o paredes"
@@ -236,10 +338,39 @@ async function start() {
   $("logout").hidden = false;
   const { data: admin, error } = await db.rpc("is_admin");
   if (error) return notice("No se pudo verificar tu acceso. ¿Corriste <code>supabase/setup.sql</code>?");
-  if (!admin) return notice(`<b>${esc(session.user.email)}</b> no es administrador. Agrégalo en la tabla <code>admins</code> desde el SQL Editor de Supabase.`);
+  platform = Boolean(admin);
+  // tiendas que administra: todas (plataforma) o en las que es miembro
+  const [{ data: all, error: e1 }, { data: mine }] = await Promise.all([
+    db.from("stores").select("*").order("name"),
+    db.from("store_members").select("store_id").eq("user_id", session.user.id),
+  ]);
+  if (e1) return notice(/stores/.test(e1.message) ? "Falta correr <code>supabase/008-multiempresa.sql</code> en el SQL Editor de Supabase." : "No se pudieron cargar las tiendas.");
+  const ids = new Set((mine || []).map((m) => m.store_id));
+  stores = platform ? all : all.filter((x) => ids.has(x.id));
+  if (!stores.length) return notice(`<b>${esc(session.user.email)}</b> no tiene una tienda asignada. Pídele a Kreadu que la cree.`);
+  document.querySelector('[data-tab="tiendas"]').hidden = !platform;
+  let keep = null;
+  try { keep = localStorage.getItem("lambert_admin_tienda"); } catch { /* sin almacenamiento */ }
+  await enterStore(stores.find((x) => x.id === keep) || stores[0]);
+}
+
+// ── Tienda que se administra ──
+let stores = [], platform = false;
+async function enterStore(store) {
+  useStore(store);
+  try { localStorage.setItem("lambert_admin_tienda", store.id); } catch { /* sin almacenamiento */ }
+  document.title = `${C.storeName} · Administrar`;
+  renderBrand($("brand"));
+  $("storeSel").hidden = stores.length < 2;
+  $("storeSel").innerHTML = stores.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("storeSel").value = store.id;
+  $("viewCatalog").href = `catalogo.html?t=${encodeURIComponent(store.slug)}`;
+  fillCompany();
+  renderStores();
   await refreshList();
   loadDesigns();
 }
+$("storeSel").addEventListener("change", (e) => { tab = "productos"; enterStore(stores.find((x) => x.id === e.target.value)); });
 
 $("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -310,7 +441,7 @@ function categoryForm(slot, onCreated) {
     const slug = slugify(label);
     if (!slug) { st.textContent = "Escribe un nombre."; st.className = "status err"; return; }
     if (CATEGORIES.some((c) => c.slug === slug)) { st.textContent = "Ya existe una categoría con ese nombre."; st.className = "status err"; return; }
-    const { error } = await db.from("categories").insert({ slug, label, placement: form.placement.value, position: CATEGORIES.length + 1 });
+    const { error } = await db.from("categories").insert({ store_id: C.storeId, slug, label, placement: form.placement.value, position: CATEGORIES.length + 1 });
     if (error) {
       console.error(error);
       st.textContent = /categories/.test(error.message) && error.code !== "23505" ? "Falta correr supabase/005-categorias-editables.sql." : "No se pudo crear.";
@@ -334,7 +465,7 @@ $("delCat").addEventListener("click", async () => {
   const n = products.filter((p) => p.category === c.slug).length;
   if (n) return status("catStatus", `"${c.label}" tiene ${n} producto(s). Muévelos a otra categoría o elimínalos antes de borrarla.`, "err");
   if (!confirm(`¿Eliminar la categoría "${c.label}"?`)) return;
-  const { error } = await db.from("categories").delete().eq("slug", c.slug);
+  const { error } = await db.from("categories").delete().eq("store_id", C.storeId).eq("slug", c.slug);
   if (error) { console.error(error); return status("catStatus", error.code === "23503" ? "Todavía tiene productos." : "No se pudo eliminar.", "err"); }
   await loadCategories();
   listCategory = "all";
@@ -446,7 +577,7 @@ $("productForm").addEventListener("submit", async (e) => {
   status("formStatus", "Guardando…");
   const { data, error } = current
     ? await db.from("products").update(row).eq("id", current.id).select().single()
-    : await db.from("products").insert(row).select().single();
+    : await db.from("products").insert({ ...row, store_id: C.storeId }).select().single();
   $("saveBtn").disabled = false;
   if (error) { console.error(error); return status("formStatus", "No se pudo guardar. Revisa los datos e intenta de nuevo.", "err"); }
   const isNew = !current;
@@ -666,7 +797,7 @@ async function loadDesigns(more = false) {
   if (!more) { designs = []; designsDone = false; }
   status("dStatus", "Cargando…");
   let q = db.from("designs").select("id, code, data, total, customer_name, customer_phone, source, created_at")
-    .order("created_at", { ascending: false }).range(designs.length, designs.length + PAGE - 1);
+    .eq("store_id", C.storeId).order("created_at", { ascending: false }).range(designs.length, designs.length + PAGE - 1);
   if (dQuery) {
     const t = dQuery.replace(/[%*,()]/g, " ").trim();
     q = q.or(`code.ilike.*${t}*,customer_name.ilike.*${t}*,customer_phone.ilike.*${t}*`);
@@ -688,7 +819,8 @@ function renderDesigns() {
     const room = d.data?.room || {};
     const items = d.data?.items || [];
     const names = [...new Set(items.map((it) => products.find((p) => p.id === it.productId)?.name).filter(Boolean))];
-    const phone = d.customer_phone.replace(/\D/g, "");
+    // con código de país ("+57 300…"); los guardados antes de 008 no lo traen: se usa el de la tienda
+    const phone = d.customer_phone.replace(/\D/g, "") && (d.customer_phone.trim().startsWith("+") ? "" : C.dial) + d.customer_phone.replace(/\D/g, "");
     const who = [d.customer_name, d.customer_phone].filter(Boolean).join(" · ") || "Sin nombre";
     const extras = [
       when.format(new Date(d.created_at)),
@@ -731,6 +863,147 @@ $("dSearch").addEventListener("input", (e) => {
 });
 $("dRefresh").addEventListener("click", () => loadDesigns());
 $("dMore").addEventListener("click", () => loadDesigns(true));
+
+// ── Datos de la empresa ──
+const countryOptions = COUNTRIES.map((c) => `<option value="${c.iso}">${c.flag} ${esc(c.name)}</option>`).join("");
+const currencyOptions = CURRENCIES.map((c) => `<option value="${c}">${c}</option>`).join("");
+$("c-country").innerHTML = $("n-country").innerHTML = countryOptions;
+$("c-currency").innerHTML = $("n-currency").innerHTML = currencyOptions;
+function fillCompany() {
+  const s = S.store;
+  $("c-name").value = s.name; $("c-legal").value = s.legal_name; $("c-tax").value = s.tax_id;
+  $("c-country").value = s.country; $("c-currency").value = s.currency;
+  $("c-city").value = s.city; $("c-address").value = s.address; $("c-email").value = s.email; $("c-web").value = s.website;
+  $("c-waSlot").innerHTML = phoneField("c-wa", isoOfDial(s.whatsapp_cc, s.country), s.whatsapp, 'maxlength="15"');
+  $("c-phoneSlot").innerHTML = phoneField("c-phone", isoOfDial(s.phone_cc, s.country), s.phone, 'maxlength="15"');
+  status("companyStatus", "");
+  renderLogo();
+  const base = location.href.replace(/admin\.html.*$/, "");
+  const q = `?t=${encodeURIComponent(s.slug)}`;
+  $("storeLinks").innerHTML = [["Catálogo", "catalogo.html"], ["Pantalla de la tienda", "tienda.html"], ["Diseñador de baños", "disenar.html"]]
+    .map(([l, f]) => `<span>${l}: <a href="${f}${q}" target="_blank" rel="noopener">${esc(base + f + q)}</a></span>`).join("");
+}
+// al cambiar de país: su moneda y su código de teléfono (si el número aún está vacío)
+$("c-country").addEventListener("change", (e) => {
+  const c = countryOf(e.target.value);
+  $("c-currency").value = c.currency;
+  for (const id of ["c-wa", "c-phone"]) if (!$(id).value.trim()) $(`${id}-cc`).value = c.iso;
+});
+$("companyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const country = $("c-country").value, dial = countryOf(country).dial;
+  const wa = phoneValue("c-wa"), ph = phoneValue("c-phone");
+  const row = {
+    name: $("c-name").value.trim(), legal_name: $("c-legal").value.trim(), tax_id: $("c-tax").value.trim(),
+    country, currency: $("c-currency").value, city: $("c-city").value.trim(), address: $("c-address").value.trim(),
+    email: $("c-email").value.trim(), website: $("c-web").value.trim(),
+    whatsapp_cc: wa?.dial ?? countryOf($("c-wa-cc").value).dial ?? dial, whatsapp: wa?.number ?? "",
+    phone_cc: ph?.dial ?? countryOf($("c-phone-cc").value).dial ?? dial, phone: ph?.number ?? "",
+    updated_at: new Date().toISOString(),
+  };
+  if ([row.whatsapp, row.phone].some((n) => n.length > 15)) return status("companyStatus", "Un número tiene demasiados dígitos.", "err");
+  $("companySave").disabled = true; status("companyStatus", "Guardando…");
+  const { data, error } = await db.from("stores").update(row).eq("id", C.storeId).select().single();
+  $("companySave").disabled = false;
+  if (error) { console.error(error); return status("companyStatus", "No se pudo guardar. Revisa los datos.", "err"); }
+  afterStoreChange(data);
+  status("companyStatus", "Guardado ✓", "ok");
+});
+function afterStoreChange(store) {
+  stores = stores.map((x) => (x.id === store.id ? store : x));
+  useStore(store);
+  renderBrand($("brand"));
+  document.title = `${C.storeName} · Administrar`;
+  $("storeSel").innerHTML = stores.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("storeSel").value = store.id;
+  renderLogo();
+  renderStores();
+  renderList(); // los precios en la nueva moneda
+}
+function renderLogo() {
+  $("logoPreview").innerHTML = C.logo ? `<img src="${esc(C.logo)}" alt="Logo">` : `<span class="muted">Sin logo</span>`;
+  $("logoDel").hidden = !C.logo;
+}
+async function setLogo(path) {
+  const old = S.store.logo_path;
+  const { data, error } = await db.from("stores").update({ logo_path: path, updated_at: new Date().toISOString() }).eq("id", C.storeId).select().single();
+  if (error) { console.error(error); return status("logoStatus", "No se pudo guardar el logo.", "err"); }
+  if (old) await db.storage.from(C.bucket).remove([old]);
+  afterStoreChange(data);
+  status("logoStatus", path ? "Logo guardado ✓" : "Logo quitado ✓", "ok");
+}
+$("logoFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return status("logoStatus", "Usa una imagen PNG, JPG o WebP.", "err");
+  status("logoStatus", "Subiendo…");
+  const body = await compressImage(f, 600);
+  const ext = body.type === "image/webp" ? "webp" : body.type === "image/png" ? "png" : "jpg";
+  const path = `stores/${C.storeId}/logo-${crypto.randomUUID()}.${ext}`;
+  const { error } = await db.storage.from(C.bucket).upload(path, body, { contentType: body.type || f.type, cacheControl: "31536000" });
+  if (error) { console.error(error); return status("logoStatus", "No se pudo subir el logo.", "err"); }
+  await setLogo(path);
+});
+$("logoDel").addEventListener("click", () => { if (confirm("¿Quitar el logo?")) setLogo(null); });
+
+// ── Tiendas: listado y "Nueva tienda" (plataforma) ──
+function renderStores() {
+  if (!platform) return;
+  $("storesList").innerHTML = stores.map((x) => `<div class="list-item" style="cursor:default">
+      ${x.logo_path ? `<img src="${esc(fileUrl(x.logo_path))}" alt="" style="object-fit:contain">` : `<span class="ph"></span>`}
+      <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(x.name)}${x.id === C.storeId ? ' <span class="muted">· la que estás viendo</span>' : ""}</div>
+        <div class="muted">?t=${esc(x.slug)} · ${esc(countryOf(x.country).name)} · ${esc(x.currency)}${x.email ? " · " + esc(x.email) : ""}${x.active ? "" : " · inactiva"}</div></div>
+      ${x.id === C.storeId ? "" : `<button class="btn" type="button" data-enter="${x.id}">Administrar</button>`}
+    </div>`).join("");
+}
+$("storesList").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-enter]");
+  if (b) { tab = "productos"; enterStore(stores.find((x) => x.id === b.dataset.enter)); }
+});
+let slugEdited = false;
+$("newStoreBtn").addEventListener("click", () => {
+  $("newStoreForm").reset(); slugEdited = false;
+  $("n-country").value = C.country; $("n-currency").value = countryOf(C.country).currency;
+  $("newStoreForm").hidden = false; status("newStoreStatus", ""); $("n-name").focus();
+});
+$("newStoreCancel").addEventListener("click", () => { $("newStoreForm").hidden = true; });
+$("n-name").addEventListener("input", () => { if (!slugEdited) $("n-slug").value = slugify($("n-name").value); });
+$("n-slug").addEventListener("input", () => { slugEdited = true; });
+$("n-country").addEventListener("change", (e) => { $("n-currency").value = countryOf(e.target.value).currency; });
+const STORE_ERRORS = {
+  email_taken: "Ese correo ya tiene una cuenta. Usa otro.",
+  slug_taken: "Esa dirección ya la usa otra tienda. Cambia la dirección.",
+  weak_password: "La contraseña debe tener al menos 8 caracteres.",
+  invalid_email: "El correo no es válido.",
+  invalid_slug: "La dirección solo puede tener letras minúsculas, números y guiones.",
+  forbidden: "Solo un administrador de la plataforma puede crear tiendas.",
+};
+$("newStoreForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const country = $("n-country").value;
+  const body = { name: $("n-name").value.trim(), slug: $("n-slug").value.trim(), email: $("n-email").value.trim(), password: $("n-pass").value,
+    country, currency: $("n-currency").value, cc: countryOf(country).dial };
+  $("newStoreSave").disabled = true; status("newStoreStatus", "Creando…");
+  const { data, error } = await db.functions.invoke("crear-tienda", { body });
+  $("newStoreSave").disabled = false;
+  if (error) {
+    let code = "";
+    try { code = (await error.context?.json?.())?.error ?? ""; } catch { /* sin cuerpo */ }
+    console.error(error, code);
+    return status("newStoreStatus", STORE_ERRORS[code] ||
+      (error.name === "FunctionsFetchError" || error.context?.status === 404 ? "Falta publicar la función crear-tienda en Supabase (ver README)." : "No se pudo crear la tienda."), "err");
+  }
+  const { data: fresh } = await db.from("stores").select("*").order("name");
+  if (fresh) stores = fresh;
+  renderStores();
+  $("storeSel").hidden = stores.length < 2;
+  $("storeSel").innerHTML = stores.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("storeSel").value = C.storeId;
+  $("newStoreForm").hidden = true;
+  status("newStoreStatus", "");
+  $("storesList").insertAdjacentHTML("afterbegin", `<div class="notice" style="margin-bottom:10px">Tienda <b>${esc(data.store.name)}</b> creada ✓. El dueño entra a esta página con <b>${esc(body.email)}</b> y la contraseña que escribiste.</div>`);
+});
 
 LambertImport.init({ db, C, products: () => products, refresh: refreshList });
 start();

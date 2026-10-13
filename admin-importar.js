@@ -226,7 +226,7 @@
   }
 
   async function applyPlan() {
-    const { db } = ctx;
+    const { db, C } = ctx;
     $("impApply").disabled = true;
     const st = (msg, kind = "") => { $("impStatus").textContent = msg; $("impStatus").className = `status ${kind}`; };
     const fails = [];
@@ -241,7 +241,7 @@
     await run(plan.updates, async (u) => check(await db.from(u.kind === "variant" ? "product_variants" : "products").update({ ...u.change, updated_at: now }).eq("id", u.id)));
     await run(plan.creates, async (c) => check(await db.from("product_variants").insert({ product_id: c.productId, ...c.row })));
     await run([...plan.newProducts.values()], async (n) => {
-      const { data, error } = await db.from("products").insert(n.row).select("id").single();
+      const { data, error } = await db.from("products").insert({ ...n.row, store_id: C.storeId }).select("id").single();
       check({ error });
       if (n.variants.length) check(await db.from("product_variants").insert(n.variants.map((v, i) => ({ ...v, product_id: data.id, position: i }))));
     });

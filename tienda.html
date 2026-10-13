@@ -22,6 +22,7 @@
   .tile.primary .muted{color:var(--text-quaternary)}
   .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:1100px;margin:22px auto 40px;padding:0 16px;width:100%}
   .section-t{max-width:1100px;margin:6px auto 10px;padding:0 16px;width:100%;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-tertiary)}
+  .hero-logo img{max-height:96px;max-width:min(320px,80%);object-fit:contain;margin-bottom:16px}
   .code-form{display:flex;gap:8px;margin-top:6px;width:100%}
   .code-form input{font-size:20px;letter-spacing:.08em;text-transform:uppercase;min-width:0}
 </style>
@@ -31,6 +32,7 @@
   <button class="btn" id="fullBtn" type="button" style="margin-left:auto" title="Pantalla completa">⛶ Pantalla completa</button></div></header>
 
 <section class="hero">
+  <div id="heroLogo" class="hero-logo"></div>
   <h1>Diseña tu baño</h1>
   <p>Elige un baño de muestra o escribe tus medidas, cambia colores y acabados, y llévate el código de tu diseño.</p>
 </section>
@@ -46,10 +48,20 @@
       <button class="btn btn-primary" type="submit">Abrir</button></div></form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
+<script src="lambert.js"></script>
 <script>
-document.getElementById("brand").textContent = window.LAMBERT.storeName;
-document.title = `${window.LAMBERT.storeName} · Diseña tu baño`;
+const { C, configured, loadStore, renderBrand, esc } = Lambert;
+// la marca de la tienda: nombre y logo arriba, y el logo grande en la bienvenida
+(async () => {
+  if (!configured) return;
+  const { error } = await loadStore();
+  if (error) return console.error(error);
+  document.title = `${C.storeName} · Diseña tu baño`;
+  renderBrand(document.getElementById("brand"));
+  if (C.logo) document.getElementById("heroLogo").innerHTML = `<img src="${esc(C.logo)}" alt="${esc(C.storeName)}">`;
+})();
 
 // mismas medidas que los baños de muestra de disenar.html; dibujo simple en planta
 const T = [

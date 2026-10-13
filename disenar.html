@@ -168,7 +168,7 @@
         <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio. Precios sujetos a cambio.</p>
         <div id="saveArea" style="margin-top:14px">
           <div class="field"><label for="cName">Tu nombre <span class="muted">(opcional)</span></label><input class="input" id="cName" maxlength="80" autocomplete="name"></div>
-          <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para enviarte el diseño por WhatsApp)</span></label><input class="input" id="cPhone" maxlength="30" inputmode="tel" autocomplete="tel"></div>
+          <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para enviarte el diseño por WhatsApp)</span></label><div id="cPhoneSlot"></div></div>
           <button class="btn btn-primary" id="saveBtn" type="button" style="width:100%">Guardar mi diseño y obtener un código</button>
           <div class="status" id="saveStatus"></div>
           <div id="codeArea"></div>
@@ -232,10 +232,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const { C, db, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, illustrate } = Lambert;
+const { C, db, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
-document.title = `${C.storeName} · Diseña tu baño`;
-$("brand").textContent = C.storeName;
+$("cPhoneSlot").outerHTML = phoneField("cPhone", "CO", "", 'maxlength="20"');
 
 // ── Baños de muestra (ver docs/PLAN.md): medidas estándar y productos ya ubicados ──
 // Cada producto se elige por categoría (+ palabra clave): así funcionan con el catálogo real, no con SKU fijos.
@@ -300,19 +299,19 @@ const mountHeight = (p) => (isBidetSpray(p) ? 0.6 : WALL_HEIGHT[p.category] ?? 1
 const qs = new URLSearchParams(location.search);
 // modo tienda (pantalla en el local): sin guardar en el navegador y vuelve al inicio si nadie la usa
 const KIOSK = qs.get("modo") === "tienda";
-if (KIOSK) { document.body.classList.add("kiosk"); $("homeLink").href = "tienda.html"; $("homeLink").textContent = "← Inicio"; }
+if (KIOSK) { document.body.classList.add("kiosk"); $("homeLink").setAttribute("href", "tienda.html"); $("homeLink").textContent = "← Inicio"; }
 const emptyState = () => ({
   room: { w: 1.8, l: 2.4, h: 2.4, preset: null, doorWall: "front", doorPos: 0.5 },
   floor: null, wall: null,         // { productId, variantId }
   walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
 });
-const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem("lambert_diseno") || "null"); } catch { return null; } })();
+const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem(`lambert_diseno_${storeSlug()}`) || "null"); } catch { return null; } })();
 const state = saved?.room ? saved : emptyState();
 let savedCode = null;               // código del diseño guardado (se borra si cambia algo)
 function persist() {
   savedCode = null;
-  if (!KIOSK) try { localStorage.setItem("lambert_diseno", JSON.stringify(state)); } catch { /* sin almacenamiento: solo esta sesión */ }
+  if (!KIOSK) try { localStorage.setItem(`lambert_diseno_${storeSlug()}`, JSON.stringify(state)); } catch { /* sin almacenamiento: solo esta sesión */ }
 }
 
 let products = [];
@@ -1256,6 +1255,17 @@ async function init() {
   buildRoom();
   frameCamera();
   if (!configured) { $("loading").textContent = "Falta conectar Supabase (config.js)."; return; }
+  // la tienda: la de la dirección, o la del diseño que se abre con su código
+  let slug = storeSlug();
+  if (qs.get("d") && !qs.get("t")) {
+    const { data } = await db.rpc("get_design", { p_code: String(qs.get("d")).trim().toUpperCase() });
+    if (data?.store) slug = data.store;
+  }
+  const { error: storeError } = await loadStore(slug);
+  if (storeError) { console.error(storeError); $("loading").textContent = "No encontramos esta tienda."; return; }
+  document.title = `${C.storeName} · Diseña tu baño`;
+  renderBrand($("brand"));
+  $("cPhone-cc").value = C.country;
   try { products = await loadProducts(); }
   catch (e) { console.error(e); $("loading").textContent = "No se pudo cargar el catálogo."; return; }
   $("loading").remove();
@@ -1279,7 +1289,7 @@ async function init() {
   // desde el catálogo: disenar.html?add=<producto>&v=<variante>
   const toAdd = qs.get("add") && byId(qs.get("add"));
   if (toAdd) {
-    history.replaceState(null, "", location.pathname + (KIOSK ? "?modo=tienda" : ""));
+    history.replaceState(null, "", withStore(`disenar.html${KIOSK ? "?modo=tienda" : ""}`));
     if (toAdd.placement === "surface") {
       const vid = qs.get("v") || toAdd.inStock[0]?.id;
       const key = toAdd.surface_use === "wall" ? "wall" : "floor";
@@ -1317,9 +1327,11 @@ $("saveBtn").onclick = async () => {
   const st = (m, k = "") => { $("saveStatus").textContent = m; $("saveStatus").className = `status ${k}`; };
   if (!state.items.length && !state.floor && !state.wall) return st("Agrega algo a tu baño antes de guardarlo.", "err");
   $("saveBtn").disabled = true; st("Guardando…");
+  const phone = phoneValue("cPhone");
   const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items };
   const { data: code, error } = await db.rpc("save_design", {
-    p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(), p_phone: $("cPhone").value.trim(), p_source: KIOSK ? "tienda" : "web",
+    p_store: C.storeId, p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(),
+    p_phone: phone ? `+${phone.dial} ${phone.number}` : "", p_source: KIOSK ? "tienda" : "web",
   });
   $("saveBtn").disabled = false;
   if (error) { console.error(error); return st(/save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); }
@@ -1329,16 +1341,16 @@ $("saveBtn").onclick = async () => {
     <div id="qr"></div><div class="muted">Escanéalo para seguir en tu celular, o dale el código al asesor.</div></div>`;
   if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
   $("waMe").hidden = false;
-  $("waStore").hidden = !C.whatsapp; // aparece solo cuando config.js tenga el WhatsApp de la tienda
+  $("waStore").hidden = !C.whatsapp; // aparece solo cuando la tienda tenga su WhatsApp en "Datos de la empresa"
 };
-// celular colombiano de 10 dígitos (3xx…) → con el 57 delante; si ya trae el código de país, igual
-const waNumber = (v) => { const d = String(v || "").replace(/\D/g, ""); return /^3\d{9}$/.test(d) ? `57${d}` : d; };
+// código de país + número, solo dígitos (vacío = WhatsApp deja elegir a quién enviar)
+const waNumber = () => { const v = phoneValue("cPhone"); return v ? v.dial + v.number : ""; };
 const waUrl = (num, text) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 const roomLabel = () => `${fmtM(state.room.w)} × ${fmtM(state.room.l)}`;
 const budgetLines = () => lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n");
 // al cliente: su diseño y su presupuesto, para retomarlo cuando quiera
 $("waMe").onclick = () => {
-  const num = waNumber($("cPhone").value);
+  const num = waNumber();
   if (KIOSK) {
     // en la pantalla de la tienda no hay WhatsApp: un QR que el cliente escanea y se lo envía desde su celular
     const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()}) · Total ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
@@ -1352,7 +1364,7 @@ $("waMe").onclick = () => {
 // a la tienda o al asesor (cuando exista su número en config.js)
 $("waStore").onclick = () => {
   const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
-  window.open(waUrl(waNumber(C.whatsapp), text), "_blank", "noopener");
+  window.open(waUrl(C.whatsapp, text), "_blank", "noopener");
 };
 // para imprimir, el lienzo 3D se convierte en imagen (los navegadores no imprimen WebGL)
 let printImg = null;
@@ -1377,6 +1389,11 @@ async function openCode(raw) {
   const code = String(raw).trim().toUpperCase();
   const { data, error } = await db.rpc("get_design", { p_code: code });
   if (error || !data) return false;
+  // un código de otra tienda se abre con el catálogo de esa tienda
+  if (data.store && data.store !== C.storeSlug) {
+    location.href = `disenar.html?d=${encodeURIComponent(code)}&t=${encodeURIComponent(data.store)}${KIOSK ? "&modo=tienda" : ""}`;
+    return true;
+  }
   await loadDesign(data);
   savedCode = code;
   showStep(3);
@@ -1415,7 +1432,7 @@ if (KIOSK) {
       $("idleSec").textContent = n; $("idle").hidden = false;
       countdown = setInterval(() => {
         $("idleSec").textContent = --n;
-        if (n <= 0) { clearInterval(countdown); location.href = "tienda.html"; }
+        if (n <= 0) { clearInterval(countdown); location.href = withStore("tienda.html"); }
       }, 1000);
     }, 180000);
   };

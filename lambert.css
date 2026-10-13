@@ -116,3 +116,21 @@ textarea.input{min-height:80px;resize:vertical}
 .kreadu .num{font-variant-numeric:tabular-nums}
 .side-body .kreadu{margin:20px -14px -14px}
 .side-body .kreadu p{padding:12px 14px}
+
+/* Marca de la tienda: logo y nombre */
+.brand{display:inline-flex;align-items:center;gap:10px;min-width:0}
+.brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand-logo{height:32px;width:auto;max-width:120px;object-fit:contain;flex-shrink:0}
+
+/* Teléfono: código de país + número */
+.phone-field{display:flex;gap:6px}
+.phone-field select{flex:0 0 auto;width:auto;max-width:42%}
+.phone-field input{flex:1;min-width:0}
+
+/* Contraseña con botón para verla */
+.pass-field{position:relative}
+.pass-field input{padding-right:44px;width:100%}
+.pass-field button{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);border-radius:var(--radius-sm)}
+.pass-field button:hover{color:var(--text-primary)}
+.logo-preview{width:140px;height:80px;border:1px dashed var(--border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:var(--surface-muted);overflow:hidden}
+.logo-preview img{max-width:100%;max-height:100%;object-fit:contain}

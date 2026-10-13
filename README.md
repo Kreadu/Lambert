@@ -16,10 +16,23 @@
 4. En `config.js`, completa `supabaseUrl` y `supabaseKey`. Los dos están en **Project Settings → API Keys**: usa la **Publishable key** (o la *anon* legacy). La clave secreta nunca va aquí.
 5. Prueba en local: `python3 -m http.server 8080` y abre http://localhost:8080/admin.html.
 
+## Varias tiendas (empresas)
+
+Desde `008` la plataforma tiene varias tiendas. Cada una tiene sus datos, su logo, su país y moneda, su catálogo
+y sus diseños, y no ve los de las demás. Las páginas muestran la tienda de la dirección (`catalogo.html?t=mi-tienda`)
+o la de `store` en `config.js`.
+
+1. **SQL Editor** → pega `supabase/008-multiempresa.sql` → **Run**. Lo que ya existía queda en la tienda `lambert`.
+2. **Edge Functions → Deploy a new function → Via Editor**, nombre `crear-tienda`: pega
+   `supabase/functions/crear-tienda/index.ts`, desactiva *Verify JWT* y **Deploy**.
+3. En `admin.html`, quien esté en la tabla `admins` (Kreadu) ve la pestaña **Tiendas** → **+ Nueva tienda**: nombre,
+   país, correo y contraseña del dueño. El dueño entra a `admin.html` con ese correo y solo ve su tienda.
+4. Cada tienda llena **Datos de la empresa**: logo, razón social, país, moneda, WhatsApp y teléfono con código de país.
+
 ## En la tienda
 
 Abre `tienda.html` en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.
-Para que los clientes envíen su cotización a la tienda por WhatsApp, pon el número en `whatsapp` de `config.js`.
+Para que aparezca "Hablar con un asesor", pon el WhatsApp en admin.html → **Datos de la empresa**.
 
 ## Fotos 3D
 

@@ -42,13 +42,10 @@
 <script src="lambert.js"></script>
 <script src="ilustraciones.js"></script>
 <script>
-const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, mountSpin, mountModel, illustrate } = Lambert;
+const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, renderBrand, withStore, mountSpin, mountModel, illustrate } = Lambert;
 let products = [];
 let category = "all";
 let search = "";
-
-document.title = `${C.storeName} · Catálogo`;
-document.getElementById("brand").textContent = C.storeName;
 
 async function init() {
   const grid = document.getElementById("grid");
@@ -57,6 +54,12 @@ async function init() {
     return;
   }
   try {
+    if (!C.storeId) {
+      const { error } = await loadStore();
+      if (error) throw error;
+      document.title = `${C.storeName} · Catálogo`;
+      renderBrand(document.getElementById("brand"));
+    }
     products = await loadProducts();
   } catch (e) {
     console.error(e);
@@ -237,7 +240,7 @@ if (new URLSearchParams(location.search).get("modo") === "tienda") {
   document.querySelectorAll('a[href^="disenar.html"]').forEach((a) => (a.href += (a.href.includes("?") ? "&" : "?") + "modo=tienda"));
   document.querySelector(".topbar .wrap").insertAdjacentHTML("afterbegin", `<a class="btn" href="tienda.html" style="text-decoration:none">← Inicio</a>`);
   let t;
-  const arm = () => { clearTimeout(t); t = setTimeout(() => (location.href = "tienda.html"), 120000); };
+  const arm = () => { clearTimeout(t); t = setTimeout(() => (location.href = withStore("tienda.html")), 120000); };
   ["pointerdown", "keydown", "wheel", "scroll"].forEach((ev) => addEventListener(ev, arm, { passive: true }));
   arm();
 }

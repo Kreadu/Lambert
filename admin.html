@@ -46,6 +46,33 @@
     <div id="list"></div>
   </section>
 
+  <!-- Carga masiva -->
+  <section id="bulkPanel" class="panel" hidden>
+    <h2>Precios, stock y fotos en lote</h2>
+    <details>
+      <summary style="cursor:pointer;font-weight:500">Importar precios y stock (Excel o CSV)</summary>
+      <p class="muted" style="margin:8px 0">Cada fila se busca por <b>referencia (SKU)</b> o por <b>nombre + color</b>. Antes de guardar
+        te muestro qué cambia. Lo más fácil: <b>exporta</b> el catálogo, edítalo en Excel y vuelve a importarlo.</p>
+      <div class="row" style="flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn" type="button" id="expBtn">⬇ Exportar catálogo</button>
+        <button class="btn" type="button" id="tplBtn">⬇ Plantilla vacía</button>
+      </div>
+      <input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt">
+      <label class="row" style="font-size:14px;margin-top:8px"><input type="checkbox" id="impCreate"> Crear los productos y colores que no existan</label>
+      <div class="status" id="impStatus"></div>
+      <div id="impPlan"></div>
+    </details>
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:500">Subir fotos en lote</summary>
+      <p class="muted" style="margin:8px 0">Nombra cada foto con la <b>referencia (SKU)</b> o el <b>nombre</b> del producto. Para varias fotos
+        del mismo producto agrega un número: <code>COR-SAN-001.jpg</code>, <code>COR-SAN-001-2.jpg</code>, <code>COR-SAN-001-3.jpg</code>.
+        Se comprimen antes de subir.</p>
+      <input type="file" id="phFiles" accept="image/*" multiple>
+      <div class="status" id="phStatus"></div>
+      <div id="phPlan"></div>
+    </details>
+  </section>
+
   <!-- Editor -->
   <section id="editor" hidden>
     <div class="panel">
@@ -161,6 +188,7 @@
 <script src="config.js"></script>
 <script src="lambert.js"></script>
 <script src="ilustraciones.js"></script>
+<script src="admin-importar.js"></script>
 <script>
 const { C, db, configured, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
@@ -181,6 +209,7 @@ fillCategorySelect();
 
 function show(section) {
   ["login", "listPanel", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
+  $("bulkPanel").hidden = section !== "listPanel";
 }
 function status(id, msg, kind = "") { const el = $(id); el.textContent = msg; el.className = `status ${kind}`; }
 function notice(html) { $("notice").innerHTML = html; show("notice"); }
@@ -617,6 +646,7 @@ $("u-model").addEventListener("change", async (e) => {
   await upload("model", [f], "s-model");
 });
 
+LambertImport.init({ db, C, products: () => products, refresh: refreshList });
 start();
 </script>
 </body>

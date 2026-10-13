@@ -32,8 +32,10 @@
       <rect x="94" y="78" width="12" height="16" rx="3" fill="#c0c4c8"/>`,
     urinal: (p) => `${S.wall()}<path d="M70 40 Q100 28 130 40 L130 120 Q130 150 100 156 Q70 150 70 120 Z" fill="${p.c}" stroke="${p.d}"/>
       <path d="M80 70 Q100 64 120 70 L120 118 Q118 138 100 142 Q82 138 80 118 Z" fill="${p.d}" opacity=".18"/>`,
-    seat: (p) => `${S.shadow(46)}<ellipse cx="100" cy="112" rx="48" ry="56" fill="${p.c}" stroke="${p.d}" stroke-width="2"/>
-      <ellipse cx="100" cy="118" rx="28" ry="36" fill="${BG}" stroke="${p.d}"/><rect x="74" y="50" width="52" height="10" rx="5" fill="${p.d}"/>`,
+    seat: (p, o = {}) => `${S.shadow(46)}<ellipse cx="100" cy="112" rx="48" ry="56" fill="${p.c}" stroke="${p.d}" stroke-width="2"/>
+      <ellipse cx="100" cy="118" rx="28" ry="36" fill="${BG}" stroke="${p.d}"/><rect x="74" y="50" width="52" height="10" rx="5" fill="${p.d}"/>
+      ${o.bidet ? `<rect x="96" y="80" width="8" height="26" rx="4" fill="#9aa4ab"/><circle cx="100" cy="106" r="4" fill="#5f6f7f"/>
+        <rect x="148" y="62" width="20" height="34" rx="5" fill="${p.c}" stroke="${p.d}"/><circle cx="158" cy="79" r="6" fill="#c0c4c8"/>` : ""}`,
     flushPlate: ({ m, d }) => `${S.wall()}<rect x="60" y="60" width="80" height="54" rx="6" fill="${m}" stroke="${d}"/>
       <rect x="66" y="66" width="32" height="42" rx="4" fill="${shade(m, 0.08)}" stroke="${d}"/><rect x="102" y="66" width="32" height="42" rx="4" fill="${shade(m, 0.08)}" stroke="${d}"/>`,
 
@@ -93,6 +95,16 @@
       <ellipse cx="146" cy="22" rx="34" ry="9" fill="${m}" stroke="${d}"/><rect x="80" y="120" width="40" height="22" rx="8" fill="${m}" stroke="${d}"/><rect x="60" y="80" width="12" height="40" rx="6" fill="${m}" stroke="${d}"/>`,
     electricShower: ({ c, d }) => `${S.wall()}<path d="M40 50 L100 50 L100 70" stroke="#c0c4c8" stroke-width="8" fill="none"/>
       <rect x="64" y="70" width="72" height="56" rx="18" fill="${c}" stroke="${d}"/><ellipse cx="100" cy="132" rx="38" ry="10" fill="${shade(c, -0.08)}" stroke="${d}"/><path d="M136 90 Q170 90 170 170" stroke="#333" stroke-width="3" fill="none"/>`,
+    // ducha higiénica: llave o mezclador en la pared, manguera y la duchita colgada en su soporte
+    bidetSpray: ({ m, d }, o = {}) => `${S.wall()}
+      ${o.mixer ? `<circle cx="62" cy="70" r="26" fill="${m}" stroke="${d}"/>${S.lever(54, 50, m)}<rect x="56" y="64" width="12" height="12" rx="3" fill="${shade(m, -0.15)}"/>`
+        : `<rect x="44" y="62" width="34" height="22" rx="6" fill="${m}" stroke="${d}"/><circle cx="61" cy="52" r="10" fill="${m}" stroke="${d}"/>`}
+      ${o.tee ? `<rect x="20" y="96" width="40" height="10" rx="3" fill="#d0d3d6"/>` : ""}
+      <path d="M62 ${o.mixer ? 96 : 84} Q60 170 110 168 Q150 166 140 100" stroke="${shade(m, -0.1)}" stroke-width="5" fill="none"/>
+      <rect x="128" y="56" width="26" height="12" rx="3" fill="${m}"/>
+      <path d="M130 64 L150 64 L146 110 Q140 118 134 110 Z" fill="${m}" stroke="${d}"/>
+      <path d="M150 70 L162 64 L166 72 L152 78 Z" fill="${shade(m, -0.15)}"/>
+      <rect x="144" y="84" width="6" height="16" rx="3" fill="${shade(m, -0.2)}"/>`,
     niche: ({ m, d }) => `${S.wall()}<rect x="50" y="30" width="100" height="140" rx="2" fill="${shade(m, -0.05)}" stroke="${d}"/><rect x="58" y="38" width="84" height="124" fill="#d9d4ca"/><rect x="58" y="96" width="84" height="5" fill="${m}"/>`,
 
     glass: ({ c, d }, o = {}) => {
@@ -240,8 +252,8 @@
       case "ceramica": return tile(p, pal);
       case "sanitarios":
         if (has("orinal")) return D.urinal(pal);
+        if (has("asiento")) return D.seat(pal, { bidet: has("bidé") }); // antes que "bidé": el asiento bidé es un asiento
         if (has("bidé")) return D.bidet(pal);
-        if (has("asiento")) return D.seat(pal);
         if (has("tanque")) return D.flushPlate(pal);
         return D.toilet(pal, { one: has("one piece", "smart", "inteligente"), wall: has("suspendido"), tank: !has("suspendido") });
       case "lavamanos":
@@ -256,6 +268,7 @@
         if (has("de pared")) return D.wallFaucet(pal);
         return D.faucet(pal, { tall: has("alta"), two: has("4\"", "8\""), push: has("push"), sensor: has("sensor") });
       case "duchas":
+        if (has("higiénica")) return D.bidetSpray(pal, { mixer: has("mezclador", "empotrada", "termostática"), tee: has(" en t ") });
         if (has("eléctrica")) return D.electricShower(pal);
         if (has("nicho")) return D.niche(pal);
         if (has("columna")) return D.column(pal);

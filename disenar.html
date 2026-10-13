@@ -262,6 +262,8 @@ const DEFAULT_DIMS = { sanitarios: [38, 76, 68], lavamanos: [55, 18, 45], grifer
   divisiones: [120, 190, 4], tinas: [150, 50, 70], muebles: [60, 50, 46], espejos: [60, 80, 3], accesorios: [40, 6, 8] };
 const WALL_HEIGHT = { lavamanos: 0.8, griferia: 1.0, duchas: 2.05, espejos: 1.55, accesorios: 1.1, muebles: 0.6, sanitarios: 0.25 };
 const DOOR = { w: 0.8, h: 2.05 };
+const isBidetSpray = (p) => /higiénica/i.test(`${p.subcategory} ${p.name}`);
+const mountHeight = (p) => (isBidetSpray(p) ? 0.6 : WALL_HEIGHT[p.category] ?? 1.0);
 
 // ── Estado ──
 const qs = new URLSearchParams(location.search);
@@ -651,6 +653,12 @@ function proxy(p, color) {
       break;
     }
     case "duchas": {
+      if (isBidetSpray(p)) {
+        add(new THREE.BoxGeometry(0.07, 0.07, 0.03), metal, -0.08, h * 0.6, 0);            // llave o mezclador
+        add(new THREE.BoxGeometry(0.03, 0.12, 0.04), metal, 0.06, h * 0.55, 0.02);        // duchita colgada
+        add(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 8).rotateZ(Math.PI / 2), mat("#9aa0a4"), -0.01, h * 0.3, 0.01); // manguera
+        break;
+      }
       add(new THREE.CylinderGeometry(w / 2, w / 2, Math.max(h, 0.02), 32), metal, 0, h / 2, d / 2);
       add(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 12).rotateX(Math.PI / 2), metal, 0, h, 0); // brazo hasta la pared
       break;
@@ -762,7 +770,7 @@ async function addProduct(p, variantId) {
     const wl = (vis.length ? vis : walls).sort((a, b) => a.mesh.position.distanceTo(camera.position) - b.mesh.position.distanceTo(camera.position)).at(-1);
     item.wall = wl.side;
     const [, h] = dimsOf(p);
-    item.y = Math.max(0, (WALL_HEIGHT[p.category] ?? 1.0) - h / 2);
+    item.y = Math.max(0, mountHeight(p) - h / 2);
   }
   state.items.push(item);
   const obj = await buildItem(item);
@@ -933,7 +941,7 @@ async function applyTemplate(id) {
     if (spec.wall || p.placement === "wall") {
       it.wall = spec.wall || "back";
       const [, h] = dimsOf(p);
-      it.y = spec.y ?? Math.max(0, (WALL_HEIGHT[p.category] ?? 1.0) - h / 2);
+      it.y = spec.y ?? Math.max(0, mountHeight(p) - h / 2);
     }
     state.items.push(it);
   }

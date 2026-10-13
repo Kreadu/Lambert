@@ -354,6 +354,43 @@ for sub, name, unit, price, desc, feats, variants in [
     add("pegantes", sub, name, unit, price, None, desc, feats, variants)
 
 
+# ── Lote 007: ducha higiénica ("ducha turca") y asientos bidé, alternativas al bidé ──
+# Van al final y con SKU propio para no cambiar las referencias ya cargadas (los SKU de arriba dependen del orden).
+LOTE_007 = []
+
+
+def add007(sku, *args, **kw):
+    add(*args, **kw)
+    P[-1]["sku"] = sku
+    LOTE_007.append(P[-1])
+
+
+add007("DEMO-HIG-001", "duchas", "Ducha higiénica", "Ducha higiénica (turca) con manguera y soporte", "unidad", 85000, (5, 18, 8),
+       "Duchita de mano junto al sanitario para el aseo íntimo: la alternativa práctica al bidé. Gatillo para controlar el chorro.",
+       [("Manguera", "1,2 m flexible"), ("Incluye", "Ducha de mano, manguera y soporte de pared"), ("Agua", "Fría")], METAL)
+add007("DEMO-HIG-002", "duchas", "Ducha higiénica", "Kit ducha higiénica con llave de paso", "juego", 140000, (8, 18, 10),
+       "Ducha higiénica con su llave de paso angular: se conecta a la salida de agua del sanitario.",
+       [("Incluye", "Ducha de mano, manguera 1,2 m, soporte y llave de paso 1/2\""), ("Agua", "Fría")], METAL)
+add007("DEMO-HIG-003", "duchas", "Ducha higiénica", "Kit ducha higiénica en T para sanitario (sin obra)", "juego", 95000, (8, 18, 10),
+       "Se instala con una T en la llave del tanque del sanitario, sin romper la pared.",
+       [("Incluye", "T de conexión, ducha de mano, manguera y soporte"), ("Instalación", "Sin obra")], METAL_BASIC)
+add007("DEMO-HIG-004", "duchas", "Ducha higiénica", "Ducha higiénica con mezclador monocontrol de pared", "unidad", 290000, (12, 20, 12),
+       "Mezclador de agua fría y caliente a la vista, con su ducha higiénica.",
+       [("Agua", "Fría y caliente"), ("Manguera", "1,2 m")], METAL)
+add007("DEMO-HIG-005", "duchas", "Ducha higiénica", "Ducha higiénica empotrada fría y caliente", "unidad", 380000, (12, 12, 8),
+       "Mezclador empotrado en la pared: solo se ven la manija, la salida y la ducha de mano.",
+       [("Agua", "Fría y caliente"), ("Incluye", "Cuerpo de empotrar")], METAL)
+add007("DEMO-HIG-006", "duchas", "Ducha higiénica", "Ducha higiénica termostática empotrada", "unidad", 520000, (14, 14, 8),
+       "Mantiene la temperatura del agua estable: evita cambios bruscos de frío o calor.",
+       [("Agua", "Fría y caliente, termostática"), ("Incluye", "Cuerpo de empotrar")], METAL[:4])
+add007("DEMO-BID-001", "sanitarios", "Asiento bidé", "Asiento bidé sin electricidad (agua fría)", "unidad", 260000, (36, 8, 48),
+       "Reemplaza la tapa del sanitario y le agrega un bidé con boquilla retráctil. No necesita conexión eléctrica.",
+       [("Boquillas", "2 (trasera y femenina)"), ("Agua", "Fría"), ("Cierre", "Lento")], LOZA_BASIC, placement="none")
+add007("DEMO-BID-002", "sanitarios", "Asiento bidé", "Asiento bidé sin electricidad (agua fría y caliente)", "unidad", 420000, (36, 8, 48),
+       "Como el de agua fría, con mezcla de agua caliente para más comodidad.",
+       [("Boquillas", "2 autolimpiables"), ("Agua", "Fría y caliente"), ("Cierre", "Lento")], LOZA_BASIC, placement="none")
+
+
 # ── SQL ──
 def q(s):
     return "null" if s is None else "'" + str(s).replace("'", "''") + "'"
@@ -388,7 +425,7 @@ out = [
 counts = {}
 for i, p in enumerate(P, 1):
     counts[p["cat"]] = counts.get(p["cat"], 0) + 1
-    sku = f"DEMO-{p['cat'][:3].upper()}-{i:03d}"
+    sku = p.get("sku") or f"DEMO-{p['cat'][:3].upper()}-{i:03d}"
     w, h, d = p["dims"] or (None, None, None)
     tw, th, use = p["tile"] or (None, None, None)
     placement = p["placement"] or CAT_PLACEMENT[p["cat"]]
@@ -414,5 +451,27 @@ out.append("-- Resumen: " + ", ".join(f"{k} {v}" for k, v in counts.items()) +
 
 dest = Path(__file__).resolve().parent.parent / "supabase" / "004-catalogo-demo.sql"
 dest.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+# 007: solo los productos nuevos, para cargarlos sin tocar lo ya editado en el catálogo
+new_skus = {p["sku"] for p in LOTE_007}
+lines = out[out.index("begin;") + 2:out.index("commit;")]
+blocks, cur = [], []
+for ln in lines:
+    cur.append(ln)
+    if ln == "":
+        blocks.append(cur); cur = []
+keep = [b for b in blocks if any(f"'{s}'" in b[0] for s in new_skus)]
+d7 = Path(__file__).resolve().parent.parent / "supabase" / "007-ducha-higienica.sql"
+d7.write_text("\n".join([
+    "-- Lambert · 007 · ducha higiénica (\"ducha turca\") y asientos bidé (GENERADO por tools/generar_catalogo.py).",
+    "-- Solo agrega estos productos; no toca el resto del catálogo. Se puede repetir.",
+    "",
+    "begin;",
+    "delete from public.products where sku like 'DEMO-HIG-%' or sku like 'DEMO-BID-%';",
+    "",
+    *[ln for b in keep for ln in b],
+    "commit;",
+]) + "\n", encoding="utf-8")
+print(f"{d7.name}: {len(keep)} productos")
 print(f"{dest.name}: {len(P)} productos, {sum(len(p['variants']) for p in P)} variantes")
 print(counts)

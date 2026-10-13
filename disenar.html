@@ -168,17 +168,20 @@
         <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio. Precios sujetos a cambio.</p>
         <div id="saveArea" style="margin-top:14px">
           <div class="field"><label for="cName">Tu nombre <span class="muted">(opcional)</span></label><input class="input" id="cName" maxlength="80" autocomplete="name"></div>
-          <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para que te contactemos)</span></label><input class="input" id="cPhone" maxlength="30" inputmode="tel" autocomplete="tel"></div>
+          <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para enviarte el diseño por WhatsApp)</span></label><input class="input" id="cPhone" maxlength="30" inputmode="tel" autocomplete="tel"></div>
           <button class="btn btn-primary" id="saveBtn" type="button" style="width:100%">Guardar mi diseño y obtener un código</button>
           <div class="status" id="saveStatus"></div>
           <div id="codeArea"></div>
           <div class="row" style="flex-wrap:wrap;margin-top:8px">
-            <button class="btn" id="waBtn" type="button" hidden>Enviar por WhatsApp</button>
+            <button class="btn" id="waMe" type="button" hidden>📲 Enviármelo por WhatsApp</button>
+            <button class="btn" id="waStore" type="button" hidden>Hablar con un asesor</button>
             <button class="btn" id="printBtn" type="button">Imprimir</button>
             <button class="btn" id="resetBtn" type="button">Empezar de nuevo</button>
           </div>
+          <div id="waQrArea" class="no-print"></div>
         </div>
       </section>
+      <div data-kreadu></div>
     </div>
     <div class="side-foot">
       <span class="muted" id="footTotal" style="flex:1"></span>
@@ -1143,7 +1146,7 @@ function renderSummary() {
   renderPlaced();
   $("footTotal").innerHTML = total ? `Total <b style="color:var(--text-primary)">${money.format(total)}</b>` : "";
   $("expTotal").innerHTML = total ? `Total <b>${money.format(total)}</b>` : "";
-  if (!savedCode) { $("codeArea").innerHTML = ""; $("waBtn").hidden = true; }
+  if (!savedCode) { $("codeArea").innerHTML = $("waQrArea").innerHTML = ""; $("waMe").hidden = $("waStore").hidden = true; }
 }
 
 // ── Cámara y bucle ──
@@ -1306,13 +1309,31 @@ $("saveBtn").onclick = async () => {
   $("codeArea").innerHTML = `<div class="code-box"><div class="muted">Tu código</div><div class="code">${esc(code)}</div>
     <div id="qr"></div><div class="muted">Escanéalo para seguir en tu celular, o dale el código al asesor.</div></div>`;
   if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
-  $("waBtn").hidden = false;
+  $("waMe").hidden = false;
+  $("waStore").hidden = !C.whatsapp; // aparece solo cuando config.js tenga el WhatsApp de la tienda
 };
-$("waBtn").onclick = () => {
-  const lines = lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n");
-  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${fmtM(state.room.w)} × ${fmtM(state.room.l)}):\n${lines}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
-  const num = (C.whatsapp || "").replace(/\D/g, "");
-  window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+// celular colombiano de 10 dígitos (3xx…) → con el 57 delante; si ya trae el código de país, igual
+const waNumber = (v) => { const d = String(v || "").replace(/\D/g, ""); return /^3\d{9}$/.test(d) ? `57${d}` : d; };
+const waUrl = (num, text) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+const roomLabel = () => `${fmtM(state.room.w)} × ${fmtM(state.room.l)}`;
+const budgetLines = () => lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n");
+// al cliente: su diseño y su presupuesto, para retomarlo cuando quiera
+$("waMe").onclick = () => {
+  const num = waNumber($("cPhone").value);
+  if (KIOSK) {
+    // en la pantalla de la tienda no hay WhatsApp: un QR que el cliente escanea y se lo envía desde su celular
+    const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()}) · Total ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
+    $("waQrArea").innerHTML = `<div class="code-box"><div id="waQr"></div><div class="muted">Escanéalo con tu celular para enviarte el diseño y el presupuesto por WhatsApp.</div></div>`;
+    if (window.QRCode) new QRCode($("waQr"), { text: waUrl(num, text), width: 170, height: 170, correctLevel: QRCode.CorrectLevel.L });
+    return;
+  }
+  const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()})\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\nPrecios sujetos a cambio.\n\nÁbrelo aquí: ${designUrl(savedCode)}`;
+  window.open(waUrl(num, text), "_blank", "noopener");
+};
+// a la tienda o al asesor (cuando exista su número en config.js)
+$("waStore").onclick = () => {
+  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
+  window.open(waUrl(waNumber(C.whatsapp), text), "_blank", "noopener");
 };
 // para imprimir, el lienzo 3D se convierte en imagen (los navegadores no imprimen WebGL)
 let printImg = null;
@@ -1357,7 +1378,7 @@ $("codeForm").onsubmit = async (e) => {
 async function resetAll() {
   Object.assign(state, emptyState());
   savedCode = null;
-  $("cName").value = ""; $("cPhone").value = ""; $("saveStatus").textContent = "";
+  $("cName").value = ""; $("cPhone").value = ""; $("saveStatus").textContent = ""; $("waQrArea").innerHTML = "";
   select(null);
   setView(false);
   renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
@@ -1386,5 +1407,6 @@ if (KIOSK) {
 
 init();
 </script>
+<script src="kreadu.js"></script>
 </body>
 </html>

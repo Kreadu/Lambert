@@ -36,5 +36,8 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV, fotos en lote y diseños guardados), `disenar.html`
   (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom, cerámica distinta en
   cada pared, lista "En tu baño" para cambiar el color de cada producto, blancos neutros) y `tienda.html` (kiosco).
-- Pendiente: `whatsapp` de la tienda en `config.js`;
+- Pie de Kreadu (desarrollador) en todas las páginas: `kreadu.js`, mismos datos que Miel.
+- WhatsApp: "Enviármelo por WhatsApp" manda al cliente su diseño y presupuesto (en la tienda, con un QR).
+  "Hablar con un asesor" aparece solo cuando se ponga el número en `whatsapp` de `config.js` (pendiente).
+- Pendiente: número de WhatsApp de la tienda o del asesor en `config.js`;
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

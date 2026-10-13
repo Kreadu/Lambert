@@ -106,3 +106,13 @@ textarea.input{min-height:80px;resize:vertical}
 .list-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
 .list-item img,.list-item .ph{width:48px;height:48px;border-radius:var(--radius-sm);object-fit:cover;background:var(--surface-muted);flex-shrink:0}
 .notice{background:var(--surface-muted);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;font-size:14px}
+
+/* Pie de Kreadu (kreadu.js) */
+.kreadu{margin-top:auto;border-top:1px solid var(--border);background:var(--surface-muted)}
+.kreadu p{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 8px;text-align:center;font-size:12px;line-height:1.4;color:var(--text-tertiary)}
+.kreadu b{color:var(--text-primary);font-weight:600}
+.kreadu a{color:inherit;text-decoration:none}
+.kreadu a:hover{text-decoration:underline}
+.kreadu .num{font-variant-numeric:tabular-nums}
+.side-body .kreadu{margin:20px -14px -14px}
+.side-body .kreadu p{padding:12px 14px}

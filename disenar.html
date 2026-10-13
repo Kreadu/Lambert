@@ -342,7 +342,125 @@ function fitPlan() {
 }
 new ResizeObserver(resize).observe(stage);
 
-// ── Cerámica: textura a escala real (foto de la pieza o color con junta) ──
+// ── Cerámica: el diseño de la pieza dibujado (mármol, madera, cemento…) cuando aún no hay foto ──
+function shadeHex(c, amt) {
+  const n = parseInt(c.slice(1), 16);
+  const f = (x) => Math.max(0, Math.min(255, Math.round(x + amt * 255)));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+const lumHex = (c) => { const n = parseInt(c.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+function seeded(str) { // azar repetible: la misma pieza se ve igual cada vez
+  let h = 2166136261;
+  for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)) >>> 0) / 4294967296;
+}
+function drawTileFace(ctx, x, y, w, h, product, variant) {
+  const c = hexOf(variant, "#efefec");
+  const light = lumHex(c) > 0.5;
+  const dark = shadeHex(c, light ? -0.14 : 0.14);
+  const name = `${product?.name || ""} ${product?.subcategory || ""}`.toLowerCase();
+  const rnd = seeded(`${product?.id}:${variant?.id}`);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = c; ctx.fillRect(x, y, w, h);
+  const joint = light ? "#c9c3b8" : "#3a3a3a";
+
+  if (/hexagonal/.test(name)) {           // malla de hexágonos con su propia junta
+    const r = w / 9, hh = r * Math.sqrt(3);
+    ctx.fillStyle = joint; ctx.fillRect(x, y, w, h);
+    for (let j = -1, cy0 = y; cy0 < y + h + hh; j++, cy0 += hh) for (let i = -1, cx = x; cx < x + w + r; i++, cx += r * 1.5) {
+      const cy = cy0 + (i % 2 ? hh / 2 : 0);
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) ctx.lineTo(cx + (r - 1.5) * Math.cos(k * Math.PI / 3), cy + (r - 1.5) * Math.sin(k * Math.PI / 3));
+      ctx.fillStyle = rnd() < 0.15 ? dark : c; ctx.fill();
+    }
+  } else if (/mosaico|malla/.test(name)) { // pastillas pequeñas en tonos parecidos
+    const n = 12, s = w / n;
+    ctx.fillStyle = joint; ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < n; i++) for (let j = 0; j < Math.ceil(h / s); j++) {
+      ctx.fillStyle = shadeHex(c, (rnd() - 0.5) * 0.18);
+      ctx.fillRect(x + i * s + 1, y + j * s + 1, s - 2, s - 2);
+    }
+  } else if (/hidráulica/.test(name)) {   // motivo geométrico centrado
+    ctx.fillStyle = "#efebe2"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = c;
+    const cx = x + w / 2, cy = y + h / 2, R = Math.min(w, h) * 0.32;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    for (const [px, py] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) { ctx.beginPath(); ctx.arc(px, py, R * 0.75, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = "#efebe2"; ctx.beginPath(); ctx.arc(cx, cy, R * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = w * 0.02; ctx.strokeRect(x + w * 0.06, y + h * 0.06, w * 0.88, h * 0.88);
+  } else if (/madera/.test(name)) {       // vetas a lo largo del tablón y algún nudo
+    const grain = shadeHex(c, light ? -0.2 : -0.14);
+    const long = h > w, L = long ? h : w, S = long ? w : h;
+    // bandas anchas de tono (se ven de lejos) y encima vetas finas (se ven de cerca)
+    for (let i = 0; i < 5; i++) {
+      ctx.globalAlpha = 0.18 + rnd() * 0.15;
+      ctx.fillStyle = rnd() < 0.5 ? shadeHex(c, -0.12) : shadeHex(c, 0.08);
+      const o = rnd() * S, bw = S * (0.08 + rnd() * 0.16);
+      long ? ctx.fillRect(x + o, y, bw, h) : ctx.fillRect(x, y + o, w, bw);
+    }
+    ctx.strokeStyle = grain; ctx.globalAlpha = 0.8;
+    for (let i = 0; i < 14; i++) {
+      const o = (i + 0.5) * S / 14 + (rnd() - 0.5) * S / 16, amp = S * 0.04 * (0.5 + rnd());
+      ctx.lineWidth = 0.8 + rnd() * 2;
+      ctx.beginPath();
+      for (let t = 0; t <= 1.0001; t += 0.05) {
+        const a = t * L, b = o + Math.sin(t * Math.PI * (2 + rnd() * 0.3) + i) * amp;
+        long ? ctx.lineTo(x + b, y + a) : ctx.lineTo(x + a, y + b);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 0.5;
+    const kx = x + w * (0.2 + rnd() * 0.6), ky = y + h * (0.2 + rnd() * 0.6);
+    ctx.beginPath(); ctx.ellipse(kx, ky, S * 0.05, S * 0.025 * (long ? 2 : 1), long ? Math.PI / 2 : 0, 0, Math.PI * 2); ctx.fillStyle = shadeHex(c, -0.22); ctx.fill();
+  } else if (/mármol|marmol|calacatta|carrara|marquina|travertino|pulpis/.test(name + (variant?.name || "").toLowerCase())) {
+    const vein = shadeHex(c, light ? -0.32 : 0.4);
+    ctx.strokeStyle = vein; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // vetas: una principal en diagonal con ramas finas que se separan de ella
+    const vein1 = (sx, sy, dx, dy, width, alpha, depth) => {
+      ctx.globalAlpha = alpha; ctx.lineWidth = width;
+      ctx.beginPath(); ctx.moveTo(sx, sy);
+      let px = sx, py = sy;
+      const steps = 14;
+      for (let k = 0; k < steps; k++) {
+        const nx = px + dx / steps + (rnd() - 0.5) * w * 0.05, ny = py + dy / steps + (rnd() - 0.5) * h * 0.03;
+        ctx.quadraticCurveTo(px + (rnd() - 0.5) * w * 0.04, py + (rnd() - 0.5) * h * 0.04, nx, ny);
+        if (depth && rnd() < 0.18) { const keep = [px, py]; vein1(nx, ny, (rnd() - 0.3) * w * 0.5, h * (0.15 + rnd() * 0.25), width * 0.45, alpha * 0.8, depth - 1); ctx.globalAlpha = alpha; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(nx, ny); void keep; }
+        px = nx; py = ny;
+      }
+      ctx.stroke();
+    };
+    // anchas para que se lean de lejos (el piso se ve a 2–3 m)
+    for (let i = 0; i < 3; i++) vein1(x + rnd() * w * 0.4, y - h * 0.05, w * (0.3 + rnd() * 0.5), h * 1.1, w * (0.008 + rnd() * 0.014), 0.55 + rnd() * 0.3, 2);
+    for (let i = 0; i < 5; i++) vein1(x + rnd() * w, y + rnd() * h * 0.5, (rnd() - 0.5) * w * 0.6, h * 0.5, w * 0.004, 0.3, 0);
+  } else if (/cemento|piedra|rústico|terrazo/.test(name + (variant?.name || "").toLowerCase())) {
+    for (let i = 0; i < 260; i++) {       // moteado
+      ctx.globalAlpha = 0.08 + rnd() * 0.25;
+      ctx.fillStyle = rnd() < 0.5 ? dark : shadeHex(c, light ? 0.06 : -0.06);
+      ctx.beginPath(); ctx.arc(x + rnd() * w, y + rnd() * h, 0.5 + rnd() * 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (/antideslizante/.test(name)) {
+    ctx.fillStyle = dark; ctx.globalAlpha = 0.7;
+    const st = w / 10;
+    for (let i = 0.5; i < 10; i++) for (let j = 0.5; j < h / st; j++) { ctx.beginPath(); ctx.arc(x + i * st, y + j * st, st * 0.12, 0, Math.PI * 2); ctx.fill(); }
+  } else if (/relieve/.test(name + (variant?.name || "").toLowerCase())) {
+    ctx.strokeStyle = dark; ctx.globalAlpha = 0.45; ctx.lineWidth = 2;
+    for (let j = 0; j < 7; j++) { ctx.beginPath(); for (let t = 0; t <= 1.0001; t += 0.05) ctx.lineTo(x + t * w, y + (j + 0.5) * h / 7 + Math.sin(t * Math.PI * 4) * h * 0.02); ctx.stroke(); }
+  } else {                                 // liso: degradado suave para que no se vea plano
+    const g = ctx.createLinearGradient(x, y, x + w, y + h);
+    g.addColorStop(0, shadeHex(c, light ? 0.03 : 0.05)); g.addColorStop(1, shadeHex(c, light ? -0.05 : -0.03));
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  }
+  ctx.globalAlpha = 1;
+  if (/subway|bisel/.test(name)) {        // canto biselado: luz arriba, sombra abajo
+    ctx.lineWidth = Math.max(2, h * 0.06);
+    ctx.strokeStyle = "rgba(255,255,255,.45)"; ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x + w, y + 1); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.beginPath(); ctx.moveTo(x, y + h - 1); ctx.lineTo(x + w, y + h - 1); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ── Cerámica: textura a escala real (foto de la pieza o su diseño dibujado, con junta) ──
 const texCache = new Map();
 function tileTexture(product, variant) {
   const key = `${product?.id}:${variant?.id}`;
@@ -351,8 +469,8 @@ function tileTexture(product, variant) {
   const tw = product?.tile_width_cm || 60, th = product?.tile_height_cm || 60;
   // subway y tablón de madera van trabados (cada fila corrida media pieza): la textura lleva 2 filas
   const staggered = /subway|madera/i.test(product?.name || "");
-  canvas.width = 256;
-  canvas.height = Math.round(256 * th / tw) * (staggered ? 2 : 1);
+  canvas.width = 512;
+  canvas.height = Math.min(2048, Math.round(512 * th / tw)) * (staggered ? 2 : 1);
   const ctx = canvas.getContext("2d");
   const grout = Math.max(2, Math.round(canvas.width * 0.25 / tw)); // ≈ 2,5 mm
   const paint = (img) => {
@@ -361,7 +479,7 @@ function tileTexture(product, variant) {
     const rowH = staggered ? canvas.height / 2 : canvas.height;
     const piece = (x, y) => {
       if (img) ctx.drawImage(img, x + grout / 2, y + grout / 2, canvas.width - grout, rowH - grout);
-      else { ctx.fillStyle = hexOf(variant, "#efefec"); ctx.fillRect(x + grout / 2, y + grout / 2, canvas.width - grout, rowH - grout); }
+      else drawTileFace(ctx, x + grout / 2, y + grout / 2, canvas.width - grout, rowH - grout, product, variant);
     };
     piece(0, 0);
     if (staggered) { piece(-canvas.width / 2, rowH); piece(canvas.width / 2, rowH); }
@@ -371,6 +489,7 @@ function tileTexture(product, variant) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); // nitidez del piso visto en ángulo
   tex.userData = { tw: tw / 100, th: (th * (staggered ? 2 : 1)) / 100, clones: [] };
   paint(null);
   if (variant?.texture) {

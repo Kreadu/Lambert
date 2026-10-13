@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Administrar catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lambert.css">
+</head>
+<body>
+<header class="topbar"><div class="wrap">
+  <span class="brand" id="brand">Administrar catálogo</span>
+  <a class="muted" href="catalogo.html" target="_blank" style="margin-left:auto">Ver catálogo ↗</a>
+  <button class="btn" id="logout" hidden>Salir</button>
+</div></header>
+
+<main class="wrap" style="max-width:820px">
+  <!-- Ingreso -->
+  <section id="login" class="panel" hidden>
+    <h2>Ingresar</h2>
+    <form id="loginForm">
+      <div class="field"><label for="email">Correo</label><input class="input" id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="password">Contraseña</label><input class="input" id="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" type="submit">Ingresar</button>
+      <div class="status" id="loginStatus"></div>
+    </form>
+  </section>
+
+  <section id="notice" class="notice" hidden></section>
+
+  <!-- Lista -->
+  <section id="listPanel" class="panel" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px;flex-wrap:wrap">
+      <h2 style="margin:0">Productos</h2>
+      <button class="btn btn-primary" id="newBtn">+ Nuevo producto</button>
+    </div>
+    <div class="filters" id="listFilters"></div>
+    <div id="list"></div>
+  </section>
+
+  <!-- Editor -->
+  <section id="editor" hidden>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0" id="editorTitle">Nuevo producto</h2>
+        <button class="btn" id="backBtn">← Volver</button>
+      </div>
+      <form id="productForm">
+        <div class="field"><label for="f-name">Nombre</label><input class="input" id="f-name" required maxlength="120" placeholder="ej: Sanitario One Piece Avanti"></div>
+        <div class="row">
+          <div class="field" style="flex:1"><label for="f-category">Categoría</label><select class="input" id="f-category"></select></div>
+          <div class="field" style="flex:1"><label for="f-brand">Marca</label><input class="input" id="f-brand" maxlength="60" placeholder="ej: Corona"></div>
+        </div>
+        <div class="row">
+          <div class="field" style="flex:1"><label for="f-sub">Subcategoría</label><input class="input" id="f-sub" maxlength="60" list="subs" placeholder="ej: One piece, Porcelanato"><datalist id="subs"></datalist></div>
+          <div class="field" style="flex:1"><label for="f-unit">Se vende por</label><select class="input" id="f-unit"></select></div>
+        </div>
+        <div class="row">
+          <div class="field" style="flex:1"><label for="f-sku">Referencia / SKU</label><input class="input" id="f-sku" maxlength="60"></div>
+          <div class="field" style="flex:1"><label for="f-price">Precio base (<span id="cur"></span>)</label>
+            <input class="input" id="f-price" type="number" min="0" step="any" inputmode="decimal" required></div>
+        </div>
+        <div class="field"><label for="f-desc">Descripción</label><textarea class="input" id="f-desc" maxlength="2000"></textarea></div>
+
+        <div class="field"><label>Medidas (cm)</label>
+          <div class="row">
+            <input class="input" id="f-w" type="number" min="0" step="0.1" placeholder="Ancho" aria-label="Ancho en cm">
+            <input class="input" id="f-h" type="number" min="0" step="0.1" placeholder="Alto" aria-label="Alto en cm">
+            <input class="input" id="f-d" type="number" min="0" step="0.1" placeholder="Fondo" aria-label="Fondo en cm">
+          </div>
+          <span class="muted">Se usan para mostrarlo a escala real en el diseñador 3D.</span>
+        </div>
+
+        <div class="field" id="placementField"><label for="f-placement">Dónde va en el baño 3D</label>
+          <select class="input" id="f-placement">
+            <option value="floor">En el piso (WC, mueble, tina)</option>
+            <option value="wall">En la pared (lavamanos suspendido, espejo, grifería, ducha)</option>
+            <option value="none">No se dibuja (plomería, pegantes): solo entra en la cotización</option>
+          </select>
+        </div>
+
+        <div id="tileFields" hidden>
+          <div class="field"><label>Tamaño de la pieza (cm)</label>
+            <div class="row">
+              <input class="input" id="f-tw" type="number" min="0" step="0.1" placeholder="Ancho, ej: 60" aria-label="Ancho de la pieza">
+              <input class="input" id="f-th" type="number" min="0" step="0.1" placeholder="Alto, ej: 60" aria-label="Alto de la pieza">
+            </div>
+          </div>
+          <div class="field"><label for="f-use">Uso</label>
+            <select class="input" id="f-use">
+              <option value="both">Piso y pared</option>
+              <option value="floor">Solo piso</option>
+              <option value="wall">Solo pared</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field"><label>Ficha técnica</label>
+          <div id="features"></div>
+          <button class="btn" type="button" id="addFeature" style="align-self:flex-start">+ Agregar dato</button>
+        </div>
+
+        <label class="row" style="margin-bottom:12px;font-size:14px"><input type="checkbox" id="f-active" checked> Visible en el catálogo</label>
+
+        <div class="row">
+          <button class="btn btn-primary" type="submit" id="saveBtn">Guardar</button>
+          <button class="btn btn-danger" type="button" id="deleteBtn" hidden>Eliminar producto</button>
+        </div>
+        <div class="status" id="formStatus"></div>
+      </form>
+    </div>
+
+    <div id="afterSave" hidden>
+      <div class="panel">
+        <h2>Colores y acabados</h2>
+        <p class="muted" id="variantsHelp">Cada color o acabado con su stock. El cliente solo podrá elegir los que tengan stock.</p>
+        <div id="variants"></div>
+        <button class="btn" type="button" id="addVariant">+ Agregar color / acabado</button>
+      </div>
+
+      <div class="panel">
+        <h2>Fotos</h2>
+        <p class="muted">Fotos normales del producto. La primera es la portada.</p>
+        <div class="media-grid" id="m-photo"></div>
+        <input type="file" id="u-photo" accept="image/*" multiple>
+        <div class="status" id="s-photo"></div>
+      </div>
+      <div class="panel" id="spinPanel">
+        <h2>Vista 360°</h2>
+        <p class="muted">Toma 12 a 36 fotos girando alrededor del producto, a la misma distancia y altura. Súbelas juntas: se ordenan por nombre de archivo.</p>
+        <div class="media-grid" id="m-spin"></div>
+        <div class="row" style="flex-wrap:wrap">
+          <input type="file" id="u-spin" accept="image/*" multiple>
+          <button class="btn btn-danger" type="button" id="clearSpin" hidden>Borrar todas</button>
+        </div>
+        <div class="status" id="s-spin"></div>
+      </div>
+      <div class="panel" id="modelPanel">
+        <h2>Modelo 3D</h2>
+        <p class="muted">Archivo <b>.glb</b> (máx. 50 MB): del fabricante, escaneado (Polycam, KIRI Engine) o genérico. Es el que se usa en el diseñador del baño; el color de cada variante lo pinta. Subir uno nuevo reemplaza el anterior.</p>
+        <div class="media-grid" id="m-model"></div>
+        <input type="file" id="u-model" accept=".glb,model/gltf-binary">
+        <div class="status" id="s-model"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="lambert.js"></script>
+<script>
+const { C, db, configured, CATEGORIES, categoryLabel, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage } = Lambert;
+const $ = (id) => document.getElementById(id);
+const num = (id) => { const v = $(id).value.trim(); return v === "" ? null : Number(v); };
+let products = [];
+let current = null;   // producto en edición (null = nuevo)
+let listCategory = "all";
+
+document.title = `${C.storeName} · Administrar`;
+$("f-unit").addEventListener("change", () => { $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`; });
+$("f-unit").innerHTML = Object.entries(UNITS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
+$("f-category").innerHTML = CATEGORIES.map((c) => `<option value="${c.slug}">${esc(c.label)}</option>`).join("");
+
+function show(section) {
+  ["login", "listPanel", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
+}
+function status(id, msg, kind = "") { const el = $(id); el.textContent = msg; el.className = `status ${kind}`; }
+function notice(html) { $("notice").innerHTML = html; show("notice"); }
+const isTile = () => $("f-category").value === "ceramica";
+
+// ── Sesión ──
+async function start() {
+  if (!configured) return notice("<b>Falta conectar Supabase.</b> Completa <code>supabaseUrl</code> y <code>supabaseKey</code> en <code>config.js</code>.");
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) { $("logout").hidden = true; return show("login"); }
+  $("logout").hidden = false;
+  const { data: admin, error } = await db.rpc("is_admin");
+  if (error) return notice("No se pudo verificar tu acceso. ¿Corriste <code>supabase/setup.sql</code>?");
+  if (!admin) return notice(`<b>${esc(session.user.email)}</b> no es administrador. Agrégalo en la tabla <code>admins</code> desde el SQL Editor de Supabase.`);
+  await refreshList();
+}
+
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  status("loginStatus", "Ingresando…");
+  const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  if (error) return status("loginStatus", "Correo o contraseña incorrectos.", "err");
+  status("loginStatus", "");
+  start();
+});
+$("logout").addEventListener("click", async () => { await db.auth.signOut(); start(); });
+
+// ── Lista ──
+async function refreshList() {
+  try { products = await loadProducts(); }
+  catch (e) {
+    console.error(e);
+    const hint = /product_variants|brand|placement/.test(e.message || "") ? " ¿Corriste <code>supabase/002-catalogo-bano.sql</code>?" : "";
+    return notice(`No se pudo cargar la lista.${hint} <button class='btn' onclick='start()'>Reintentar</button>`);
+  }
+  renderList();
+  show("listPanel");
+}
+
+function renderList() {
+  const used = CATEGORIES.filter((c) => products.some((p) => p.category === c.slug));
+  $("listFilters").innerHTML = used.length < 2 ? "" : [{ slug: "all", label: "Todo" }, ...used]
+    .map((c) => `<button class="chip ${c.slug === listCategory ? "active" : ""}" data-cat="${c.slug}">${esc(c.label)}</button>`).join("");
+  const list = products.filter((p) => listCategory === "all" || p.category === listCategory);
+  $("list").innerHTML = list.length ? list.map((p) => {
+    const cover = p.photos[0] || p.spin[0] || p.variants.find((v) => v.texture)?.texture;
+    const stock = p.variants.reduce((n, v) => n + (v.active ? v.stock : 0), 0);
+    const extras = [
+      [categoryLabel(p.category), p.subcategory].filter(Boolean).join(" / "),
+      `${money.format(p.fromPrice)} / ${unitLabel(p.unit)}`,
+      p.variants.length ? `${p.variants.length} variantes · ${stock} en stock` : "sin variantes",
+      p.model && "3D",
+      !p.active && "oculto",
+    ].filter(Boolean).join(" · ");
+    return `<div class="list-item" data-id="${p.id}">
+      ${cover ? `<img src="${esc(cover)}" alt="">` : `<span class="ph"></span>`}
+      <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(p.name)}</div><div class="muted">${esc(extras)}</div></div>
+    </div>`;
+  }).join("") : `<div class="empty"><strong>Aún no hay productos</strong>Crea el primero con “Nuevo producto”.</div>`;
+}
+$("listFilters").addEventListener("click", (e) => { if (e.target.dataset.cat) { listCategory = e.target.dataset.cat; renderList(); } });
+$("list").addEventListener("click", (e) => {
+  const item = e.target.closest(".list-item");
+  if (item) openEditor(products.find((p) => p.id === item.dataset.id));
+});
+$("newBtn").addEventListener("click", () => openEditor(null));
+$("backBtn").addEventListener("click", refreshList);
+
+// ── Formulario del producto ──
+function featureRow(f = {}) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.style.marginBottom = "6px";
+  row.innerHTML = `<input class="input fl" placeholder="ej: Consumo de agua" maxlength="60" value="${esc(f.label)}">
+    <input class="input fv" placeholder="ej: 4,8 L por descarga" maxlength="200" value="${esc(f.value)}">
+    <button class="icon-btn" type="button" aria-label="Quitar">✕</button>`;
+  row.querySelector("button").onclick = () => row.remove();
+  $("features").appendChild(row);
+}
+$("addFeature").addEventListener("click", () => featureRow());
+
+function syncCategoryFields() {
+  const tile = isTile();
+  $("tileFields").hidden = !tile;
+  $("placementField").hidden = tile;
+  $("spinPanel").hidden = tile;
+  $("modelPanel").hidden = tile;
+  $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`;
+  $("variantsHelp").textContent = tile
+    ? "Cada color o diseño de la cerámica con su stock y la foto de una pieza (la textura que se pone en el piso y las paredes del diseñador)."
+    : "Cada color o acabado con su stock. El cliente solo podrá elegir los que tengan stock.";
+}
+$("f-category").addEventListener("change", () => {
+  const c = CATEGORIES.find((x) => x.slug === $("f-category").value);
+  if (c.placement !== "surface") $("f-placement").value = c.placement;
+  if (c.slug === "ceramica") $("f-unit").value = "m2";
+  else if (c.slug === "pegantes") $("f-unit").value = "bulto";
+  else if ($("f-unit").value === "m2") $("f-unit").value = "unidad";
+  syncCategoryFields();
+  renderVariants();
+});
+
+function openEditor(p) {
+  current = p ? { ...p, media: [...p.media], variants: [...p.variants] } : null;
+  $("editorTitle").textContent = p ? "Editar producto" : "Nuevo producto";
+  $("f-name").value = p?.name ?? "";
+  $("f-category").value = p?.category ?? "sanitarios";
+  $("f-brand").value = p?.brand ?? "";
+  $("f-sub").value = p?.subcategory ?? "";
+  $("f-unit").value = p?.unit ?? "unidad";
+  $("subs").innerHTML = [...new Set(products.map((x) => x.subcategory).filter(Boolean))].sort().map((x) => `<option value="${esc(x)}">`).join("");
+  $("f-sku").value = p?.sku ?? "";
+  $("f-price").value = p?.price ?? "";
+  $("f-desc").value = p?.description ?? "";
+  $("f-w").value = p?.width_cm ?? "";
+  $("f-h").value = p?.height_cm ?? "";
+  $("f-d").value = p?.depth_cm ?? "";
+  const catPlacement = CATEGORIES.find((c) => c.slug === $("f-category").value).placement;
+  $("f-placement").value = p && p.placement !== "surface" ? p.placement : (catPlacement === "surface" ? "floor" : catPlacement);
+  $("f-tw").value = p?.tile_width_cm ?? "";
+  $("f-th").value = p?.tile_height_cm ?? "";
+  $("f-use").value = p?.surface_use ?? "both";
+  $("f-active").checked = p?.active ?? true;
+  $("features").innerHTML = "";
+  (p?.features?.length ? p.features : [{}]).forEach(featureRow);
+  $("deleteBtn").hidden = !p;
+  status("formStatus", "");
+  syncCategoryFields();
+  renderAfterSave();
+  show("editor");
+  window.scrollTo(0, 0);
+}
+
+$("productForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const price = Number($("f-price").value);
+  if (!Number.isFinite(price) || price < 0) return status("formStatus", "Precio inválido.", "err");
+  const tile = isTile();
+  if (tile && (!num("f-tw") || !num("f-th"))) return status("formStatus", "Indica el tamaño de la pieza de cerámica.", "err");
+  const row = {
+    name: $("f-name").value.trim(),
+    category: $("f-category").value,
+    brand: $("f-brand").value.trim(),
+    subcategory: $("f-sub").value.trim(),
+    unit: $("f-unit").value,
+    sku: $("f-sku").value.trim() || null,
+    price,
+    description: $("f-desc").value.trim(),
+    width_cm: num("f-w"),
+    height_cm: num("f-h"),
+    depth_cm: num("f-d"),
+    placement: tile ? "surface" : $("f-placement").value,
+    tile_width_cm: tile ? num("f-tw") : null,
+    tile_height_cm: tile ? num("f-th") : null,
+    surface_use: tile ? $("f-use").value : null,
+    features: [...$("features").querySelectorAll(".row")]
+      .map((r) => ({ label: r.querySelector(".fl").value.trim(), value: r.querySelector(".fv").value.trim() }))
+      .filter((f) => f.label || f.value),
+    active: $("f-active").checked,
+    updated_at: new Date().toISOString(),
+  };
+  $("saveBtn").disabled = true;
+  status("formStatus", "Guardando…");
+  const { data, error } = current
+    ? await db.from("products").update(row).eq("id", current.id).select().single()
+    : await db.from("products").insert(row).select().single();
+  $("saveBtn").disabled = false;
+  if (error) { console.error(error); return status("formStatus", "No se pudo guardar. Revisa los datos e intenta de nuevo.", "err"); }
+  const isNew = !current;
+  current = { media: [], variants: [], ...(current || {}), ...data };
+  $("editorTitle").textContent = "Editar producto";
+  $("deleteBtn").hidden = false;
+  status("formStatus", isNew ? "Guardado ✓ — ahora agrega sus colores, fotos y modelo 3D." : "Guardado ✓", "ok");
+  renderAfterSave();
+});
+
+$("deleteBtn").addEventListener("click", async () => {
+  if (!current || !confirm(`¿Eliminar "${current.name}" con todas sus fotos y variantes? No se puede deshacer.`)) return;
+  const paths = [...current.media.map((m) => m.path), ...current.variants.map((v) => v.texture_path).filter(Boolean)];
+  if (paths.length) await db.storage.from(C.bucket).remove(paths);
+  const { error } = await db.from("products").delete().eq("id", current.id);
+  if (error) return status("formStatus", "No se pudo eliminar.", "err");
+  refreshList();
+});
+
+function renderAfterSave() {
+  $("afterSave").hidden = !current?.id;
+  if (!current?.id) return;
+  renderVariants();
+  renderMedia();
+}
+
+// ── Variantes (color / acabado con stock) ──
+function variantCard(v = {}) {
+  const tile = isTile();
+  const el = document.createElement("div");
+  el.className = "panel variant";
+  el.style.marginBottom = "10px";
+  if (v.id) el.dataset.id = v.id;
+  el.innerHTML = `
+    <div class="row" style="flex-wrap:wrap">
+      <div class="field" style="flex:2;min-width:160px"><label>Nombre</label><input class="input v-name" maxlength="80" placeholder="ej: Blanco brillante" value="${esc(v.name)}"></div>
+      <div class="field" style="width:70px"><label>Color</label><input class="input v-color" type="color" value="${esc(v.color_hex || "#ffffff")}" style="padding:2px;height:40px"></div>
+      <div class="field" style="flex:1;min-width:120px"><label>Acabado</label><input class="input v-finish" maxlength="40" placeholder="ej: mate" value="${esc(v.finish)}"></div>
+    </div>
+    <div class="row" style="flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:120px"><label>SKU</label><input class="input v-sku" maxlength="60" value="${esc(v.sku)}"></div>
+      <div class="field" style="flex:1;min-width:120px"><label>Precio <span class="muted">(vacío = base)</span></label><input class="input v-price" type="number" min="0" step="any" value="${v.price ?? ""}"></div>
+      <div class="field" style="width:100px"><label>Stock</label><input class="input v-stock" type="number" min="0" step="1" value="${v.stock ?? 0}"></div>
+    </div>
+    ${tile ? `<div class="field"><label>Foto de la pieza (textura)</label>
+      <div class="row">${v.texture ? `<img src="${esc(v.texture)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px">` : ""}
+      <input type="file" class="v-texture" accept="image/*" ${v.id ? "" : "disabled title='Guarda la variante primero'"}></div></div>` : ""}
+    <div class="row" style="flex-wrap:wrap">
+      <label class="row" style="font-size:14px"><input type="checkbox" class="v-active" ${v.active === false ? "" : "checked"}> Activa</label>
+      <button class="btn btn-primary v-save" type="button" style="margin-left:auto">Guardar</button>
+      <button class="btn btn-danger v-del" type="button">${v.id ? "Eliminar" : "Quitar"}</button>
+    </div>
+    <div class="status v-status"></div>`;
+  return el;
+}
+
+function renderVariants() {
+  if (!current?.id) return;
+  $("variants").innerHTML = "";
+  current.variants.forEach((v) => $("variants").appendChild(variantCard(v)));
+  if (!current.variants.length) $("variants").appendChild(variantCard());
+}
+$("addVariant").addEventListener("click", () => $("variants").appendChild(variantCard()));
+
+$("variants").addEventListener("click", async (e) => {
+  const card = e.target.closest(".variant");
+  if (!card) return;
+  const st = (msg, kind = "") => { const s = card.querySelector(".v-status"); s.textContent = msg; s.className = `status v-status ${kind}`; };
+  const id = card.dataset.id;
+
+  if (e.target.classList.contains("v-del")) {
+    if (!id) return card.remove();
+    if (!confirm("¿Eliminar esta variante?")) return;
+    const v = current.variants.find((x) => x.id === id);
+    if (v?.texture_path) await db.storage.from(C.bucket).remove([v.texture_path]);
+    const { error } = await db.from("product_variants").delete().eq("id", id);
+    if (error) return st("No se pudo eliminar.", "err");
+    current.variants = current.variants.filter((x) => x.id !== id);
+    card.remove();
+    return;
+  }
+
+  if (e.target.classList.contains("v-save")) {
+    const q = (c) => card.querySelector(c);
+    const name = q(".v-name").value.trim();
+    const stock = Number(q(".v-stock").value);
+    const priceRaw = q(".v-price").value.trim();
+    if (!name) return st("Ponle un nombre.", "err");
+    if (!Number.isInteger(stock) || stock < 0) return st("Stock inválido.", "err");
+    const row = {
+      product_id: current.id,
+      name,
+      color_hex: q(".v-color").value,
+      finish: q(".v-finish").value.trim(),
+      sku: q(".v-sku").value.trim() || null,
+      price: priceRaw === "" ? null : Number(priceRaw),
+      stock,
+      active: q(".v-active").checked,
+      position: id ? current.variants.find((x) => x.id === id)?.position ?? 0 : current.variants.length,
+      updated_at: new Date().toISOString(),
+    };
+    st("Guardando…");
+    const { data, error } = id
+      ? await db.from("product_variants").update(row).eq("id", id).select().single()
+      : await db.from("product_variants").insert(row).select().single();
+    if (error) { console.error(error); return st(error.code === "23505" ? "Ese SKU ya existe en otra variante." : "No se pudo guardar.", "err"); }
+    const v = { ...data, finalPrice: data.price ?? current.price, texture: data.texture_path ? fileUrl(data.texture_path) : null };
+    current.variants = id ? current.variants.map((x) => (x.id === id ? v : x)) : [...current.variants, v];
+    const fresh = variantCard(v);
+    card.replaceWith(fresh);
+    const s = fresh.querySelector(".v-status"); s.textContent = "Guardado ✓"; s.className = "status v-status ok";
+  }
+});
+
+$("variants").addEventListener("change", async (e) => {
+  if (!e.target.classList.contains("v-texture")) return;
+  const card = e.target.closest(".variant");
+  const id = card.dataset.id;
+  const f = e.target.files[0];
+  if (!id || !f) return;
+  const st = card.querySelector(".v-status");
+  st.textContent = "Subiendo textura…"; st.className = "status v-status";
+  const body = await compressImage(f, 1024);
+  const path = `${current.id}/texture/${crypto.randomUUID()}.${body.type === "image/webp" ? "webp" : "jpg"}`;
+  const up = await db.storage.from(C.bucket).upload(path, body, { contentType: body.type || f.type, cacheControl: "31536000" });
+  if (up.error) { st.textContent = "No se pudo subir."; st.className = "status v-status err"; return; }
+  const old = current.variants.find((x) => x.id === id)?.texture_path;
+  const { data, error } = await db.from("product_variants").update({ texture_path: path }).eq("id", id).select().single();
+  if (error) { st.textContent = "No se pudo registrar."; st.className = "status v-status err"; return; }
+  if (old) await db.storage.from(C.bucket).remove([old]);
+  const v = { ...data, finalPrice: data.price ?? current.price, texture: fileUrl(path) };
+  current.variants = current.variants.map((x) => (x.id === id ? v : x));
+  const fresh = variantCard(v);
+  card.replaceWith(fresh);
+  const s = fresh.querySelector(".v-status"); s.textContent = "Textura subida ✓"; s.className = "status v-status ok";
+});
+
+// ── Fotos, 360° y 3D ──
+function renderMedia() {
+  const byKind = (k) => current.media.filter((m) => m.kind === k).sort((a, b) => a.position - b.position);
+  for (const k of ["photo", "spin", "model"]) {
+    $(`m-${k}`).innerHTML = byKind(k).map((m) => `<div class="media-item">
+      ${k === "model" ? `<span>Modelo 3D<br>.glb</span>` : `<img src="${esc(fileUrl(m.path))}" alt="">`}
+      ${k === "spin" ? "" : `<button type="button" data-del="${m.id}" aria-label="Borrar">✕</button>`}
+    </div>`).join("") || `<span class="muted">Nada subido aún.</span>`;
+  }
+  $("clearSpin").hidden = !byKind("spin").length;
+}
+
+async function removeMedia(items) {
+  if (!items.length) return;
+  await db.storage.from(C.bucket).remove(items.map((m) => m.path));
+  await db.from("product_media").delete().in("id", items.map((m) => m.id));
+  const ids = new Set(items.map((m) => m.id));
+  current.media = current.media.filter((m) => !ids.has(m.id));
+}
+
+document.querySelectorAll(".media-grid").forEach((g) => g.addEventListener("click", async (e) => {
+  const id = e.target.dataset.del;
+  if (!id || !confirm("¿Borrar este archivo?")) return;
+  await removeMedia(current.media.filter((m) => m.id === id));
+  renderMedia();
+}));
+$("clearSpin").addEventListener("click", async () => {
+  if (!confirm("¿Borrar todas las fotos de la vista 360°?")) return;
+  await removeMedia(current.media.filter((m) => m.kind === "spin"));
+  renderMedia();
+});
+
+async function upload(kind, files, statusId) {
+  const pid = current.id;
+  const start = current.media.filter((m) => m.kind === kind).length;
+  const rows = [];
+  for (let i = 0; i < files.length; i++) {
+    status(statusId, `Subiendo ${i + 1} de ${files.length}…`);
+    const f = files[i];
+    const body = kind === "model" ? f : await compressImage(f, kind === "spin" ? 1200 : 1600);
+    const ext = kind === "model" ? "glb" : (body.type === "image/webp" ? "webp" : (f.name.split(".").pop() || "jpg").toLowerCase());
+    const path = `${pid}/${kind}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await db.storage.from(C.bucket).upload(path, body, {
+      contentType: kind === "model" ? "model/gltf-binary" : body.type || f.type,
+      cacheControl: "31536000",
+    });
+    if (error) { console.error(error); status(statusId, `Falló "${f.name}": ${error.message}`, "err"); break; }
+    rows.push({ product_id: pid, kind, path, position: start + i });
+  }
+  if (!rows.length) return;
+  const { data, error } = await db.from("product_media").insert(rows).select("id, kind, path, position");
+  if (error) { console.error(error); return status(statusId, "Se subieron los archivos pero no se pudieron registrar.", "err"); }
+  current.media.push(...data);
+  renderMedia();
+  if (!$(statusId).classList.contains("err")) status(statusId, `${rows.length} archivo(s) subido(s) ✓`, "ok");
+}
+
+$("u-photo").addEventListener("change", async (e) => {
+  await upload("photo", [...e.target.files], "s-photo"); e.target.value = "";
+});
+$("u-spin").addEventListener("change", async (e) => {
+  const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (files.length < 8 && !confirm(`Solo ${files.length} fotos: el giro se verá a saltos. Se recomiendan 12 a 36. ¿Subir igual?`)) { e.target.value = ""; return; }
+  await upload("spin", files, "s-spin"); e.target.value = "";
+});
+$("u-model").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  if (!f.name.toLowerCase().endsWith(".glb")) return status("s-model", "Debe ser un archivo .glb", "err");
+  if (f.size > 50 * 1024 * 1024) return status("s-model", "El archivo pasa de 50 MB.", "err");
+  await removeMedia(current.media.filter((m) => m.kind === "model"));
+  await upload("model", [f], "s-model");
+});
+
+start();
+</script>
+</body>
+</html>

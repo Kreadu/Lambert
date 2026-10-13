@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lambert.css">
+</head>
+<body>
+<header class="topbar"><div class="wrap">
+  <span class="brand" id="brand">Catálogo</span>
+  <a class="btn btn-primary" style="margin-left:auto;text-decoration:none" href="disenar.html">Diseñar mi baño</a>
+</div></header>
+
+<main class="wrap">
+  <div class="search-box">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="search" id="search" placeholder="Buscar cerámica, sanitarios, lavamanos..." aria-label="Buscar productos">
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-head">
+      <span class="modal-title" id="mTitle"></span>
+      <button class="icon-btn" id="mClose" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="lambert.js"></script>
+<script>
+const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, mountSpin, mountModel } = Lambert;
+let products = [];
+let category = "all";
+let search = "";
+
+document.title = `${C.storeName} · Catálogo`;
+document.getElementById("brand").textContent = C.storeName;
+
+async function init() {
+  const grid = document.getElementById("grid");
+  if (!configured) {
+    grid.innerHTML = `<div class="empty"><strong>Falta conectar Supabase</strong>Completa supabaseUrl y supabaseKey en config.js.</div>`;
+    return;
+  }
+  try {
+    products = await loadProducts();
+  } catch (e) {
+    console.error(e);
+    grid.innerHTML = `<div class="empty"><strong>No se pudo cargar el catálogo</strong><button class="btn" onclick="init()" style="margin-top:12px">Reintentar</button></div>`;
+    return;
+  }
+  renderFilters();
+  render();
+}
+
+function renderFilters() {
+  const used = CATEGORIES.filter((c) => products.some((p) => p.category === c.slug));
+  document.getElementById("filters").innerHTML = used.length < 2 ? "" : [{ slug: "all", label: "Todo" }, ...used]
+    .map((c) => `<button class="chip ${c.slug === category ? "active" : ""}" data-cat="${c.slug}">${esc(c.label)}</button>`)
+    .join("");
+}
+
+// Sin foto: el color de la variante y, en cerámica, el dibujo de las piezas con su junta
+function placeholder(p) {
+  const v = p.inStock[0] || p.variants[0];
+  const c = /^#[0-9a-f]{6}$/i.test(v?.color_hex || "") ? v.color_hex : "var(--surface-muted)";
+  if (p.category !== "ceramica" || !p.tile_width_cm) return `background:${c}`;
+  const k = 100 / Math.max(p.tile_width_cm, p.tile_height_cm); // escala: la pieza más grande ≈ 1/3 del cuadro
+  const w = Math.max(8, p.tile_width_cm * k * 0.6), h = Math.max(8, p.tile_height_cm * k * 0.6);
+  return `background:${c};background-image:linear-gradient(90deg,rgba(0,0,0,.18) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.18) 1px,transparent 1px);background-size:${w}% ${h}%`;
+}
+
+const swatchStyle = (hex) => `background:${/^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "transparent"}`;
+
+function render() {
+  const q = search.trim().toLowerCase();
+  const list = products.filter((p) =>
+    (category === "all" || p.category === category) &&
+    (!q || [p.name, p.brand, p.subcategory, p.description, categoryLabel(p.category), ...p.variants.map((v) => v.name)].some((t) => (t || "").toLowerCase().includes(q))));
+  const grid = document.getElementById("grid");
+  if (!products.length) {
+    grid.innerHTML = `<div class="empty"><strong>Aún no hay productos</strong>Agrégalos desde el panel de administración.</div>`;
+    return;
+  }
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><strong>No se encontraron productos</strong>Prueba con otra búsqueda.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map((p) => {
+    const cover = p.photos[0] || p.spin[0] || p.inStock.find((v) => v.texture)?.texture || p.variants.find((v) => v.texture)?.texture;
+    const tags = [!p.available && "Agotado", p.spin.length && "360°", p.model && "3D"].filter(Boolean)
+      .map((t) => `<span class="tag">${t}</span>`).join("");
+    const many = new Set(p.inStock.map((v) => v.finalPrice)).size > 1;
+    return `<button class="card" data-id="${p.id}">
+      <div class="card-img" ${cover ? "" : `style="${placeholder(p)}"`}>${cover ? `<img src="${esc(cover)}" alt="${esc(p.name)}" loading="lazy">` : ""}
+        ${tags ? `<div class="tags">${tags}</div>` : ""}</div>
+      <div class="card-info">
+        <div class="muted">${esc([p.subcategory || categoryLabel(p.category), p.brand].filter(Boolean).join(" · "))}</div>
+        <div class="card-name">${esc(p.name)}</div>
+        <div class="card-price">${many ? "Desde " : ""}${money.format(p.fromPrice)}${p.unit !== "unidad" ? ` <span class="muted">/ ${unitLabel(p.unit)}</span>` : ""}</div>
+        ${p.inStock.length ? `<div class="row" style="gap:4px;margin-top:6px">${p.inStock.slice(0, 6).map((v) =>
+          `<span class="swatch" style="${swatchStyle(v.color_hex)};width:16px;height:16px" title="${esc(v.name)}"></span>`).join("")}</div>` : ""}
+      </div>
+    </button>`;
+  }).join("");
+}
+
+function openProduct(id) {
+  const p = products.find((x) => x.id === id);
+  if (!p) return;
+  let variant = p.inStock[0] || null;
+  const tile = p.category === "ceramica";
+  const views = () => [
+    tile && variant?.texture && ["pieza", "Pieza"],
+    p.photos.length && ["fotos", "Fotos"],
+    p.spin.length > 1 && ["spin", "360°"],
+    p.model && ["model", "3D"],
+  ].filter(Boolean);
+  const features = (Array.isArray(p.features) ? p.features : []).filter((f) => f && (f.label || f.value));
+  const dims = [p.width_cm, p.height_cm, p.depth_cm].every((d) => d != null)
+    ? `${p.width_cm} × ${p.height_cm} × ${p.depth_cm} cm <span class="muted">(ancho × alto × fondo)</span>` : "";
+  const spec = [
+    p.brand && ["Marca", esc(p.brand)],
+    (variant?.sku || p.sku) && ["Referencia", esc(variant?.sku || p.sku)],
+    dims && ["Medidas", dims],
+    tile && p.tile_width_cm && ["Tamaño de la pieza", `${p.tile_width_cm} × ${p.tile_height_cm} cm`],
+    tile && p.surface_use && ["Uso", { floor: "Piso", wall: "Pared", both: "Piso y pared" }[p.surface_use]],
+    ...features.map((f) => [esc(f.label), esc(f.value)]),
+  ].filter(Boolean);
+
+  document.getElementById("mTitle").textContent = p.name;
+  const draw = () => {
+    const v = views();
+    const price = variant ? variant.finalPrice : p.price;
+    document.getElementById("mBody").innerHTML = `
+      <div class="viewer" id="viewer" ${v.length ? "" : `style="${placeholder(p)}"`}></div>
+      ${v.length > 1 ? `<div class="view-tabs">${v.map(([k, l]) => `<button class="chip" data-view="${k}">${l}</button>`).join("")}</div>` : ""}
+      <div class="thumbs" id="thumbs"></div>
+      <div class="muted">${esc([categoryLabel(p.category), p.subcategory, p.brand].filter(Boolean).join(" · "))}</div>
+      <div class="price-big">${money.format(price)}${p.unit !== "unidad" ? ` <span class="muted">/ ${unitLabel(p.unit)}</span>` : ""}</div>
+      ${p.variants.length ? `
+        <div class="section">Color / acabado${variant ? ": " + esc(variant.name) : ""}</div>
+        <div class="pills" id="variants">${p.variants.filter((x) => x.active).map((x) => {
+          const out = x.stock <= 0;
+          return `<button class="pill row" style="gap:6px;cursor:${out ? "not-allowed" : "pointer"};${x.id === variant?.id ? "border-color:var(--text-primary);font-weight:600" : ""};${out ? "opacity:.45" : ""}"
+            data-variant="${x.id}" ${out ? "disabled" : ""}>
+            <span class="swatch" style="${swatchStyle(x.color_hex)};width:16px;height:16px"></span>${esc(x.name)}${out ? " · agotado" : ""}</button>`;
+        }).join("")}</div>
+        <p class="muted" style="margin-top:6px">${variant ? (variant.stock <= 5 ? `¡Quedan ${variant.stock}!` : "Disponible") : "Agotado en todos los colores"}</p>` : ""}
+      ${p.placement !== "none" ? `<a class="btn btn-primary" style="margin-top:12px;text-decoration:none;width:100%" id="useInDesign"
+        href="disenar.html?add=${p.id}${variant ? "&v=" + variant.id : ""}" ${p.available ? "" : "hidden"}>Usar en mi diseño de baño</a>` : ""}
+      ${p.description ? `<p class="desc" style="margin-top:12px">${esc(p.description)}</p>` : ""}
+      ${spec.length ? `<div class="section">Ficha técnica</div><table class="features">${spec.map(([k, val]) =>
+        `<tr><td>${k}</td><td>${val}</td></tr>`).join("")}</table>` : ""}`;
+    if (v.length) showView(v[0][0]);
+  };
+
+  const showView = (k) => {
+    const viewer = document.getElementById("viewer");
+    const thumbs = document.getElementById("thumbs");
+    viewer.className = "viewer";
+    viewer.style.background = "";
+    thumbs.innerHTML = "";
+    document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === k));
+    if (k === "pieza") {
+      // la pieza repetida, como se vería instalada
+      viewer.innerHTML = "";
+      viewer.style.background = `url("${variant.texture}") 0 0 / 33.333% repeat`;
+    } else if (k === "fotos") {
+      viewer.innerHTML = `<img src="${esc(p.photos[0])}" alt="${esc(p.name)}">`;
+      if (p.photos.length > 1) {
+        thumbs.innerHTML = p.photos.map((u, i) => `<img src="${esc(u)}" alt="Foto ${i + 1}" data-i="${i}" class="${i ? "" : "active"}">`).join("");
+        thumbs.onclick = (e) => {
+          const i = e.target.dataset?.i;
+          if (i === undefined) return;
+          viewer.querySelector("img").src = p.photos[i];
+          thumbs.querySelectorAll("img").forEach((t) => t.classList.toggle("active", t.dataset.i === i));
+        };
+      }
+    } else if (k === "spin") {
+      mountSpin(viewer, p.spin);
+    } else if (k === "model") {
+      viewer.innerHTML = `<span class="muted">Cargando 3D…</span>`;
+      mountModel(viewer, p.model, p.name).then(() => {
+        // pinta el modelo con el color de la variante elegida
+        const mv = viewer.querySelector("model-viewer");
+        if (!mv || !variant?.color_hex) return;
+        mv.addEventListener("load", () => {
+          mv.model?.materials?.[0]?.pbrMetallicRoughness.setBaseColorFactor(variant.color_hex);
+        }, { once: true });
+      }).catch(() => { viewer.innerHTML = `<span class="muted">No se pudo cargar el 3D</span>`; });
+    }
+  };
+
+  document.getElementById("mBody").onclick = (e) => {
+    const vb = e.target.closest("[data-view]");
+    if (vb) return showView(vb.dataset.view);
+    const pick = e.target.closest("[data-variant]");
+    if (pick && !pick.disabled) { variant = p.variants.find((x) => x.id === pick.dataset.variant); draw(); }
+  };
+  draw();
+
+  document.getElementById("overlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+  document.getElementById("overlay").classList.remove("open");
+  document.getElementById("mBody").innerHTML = "";
+  document.body.style.overflow = "";
+}
+
+document.getElementById("search").addEventListener("input", (e) => { search = e.target.value; render(); });
+document.getElementById("filters").addEventListener("click", (e) => {
+  const c = e.target.dataset.cat;
+  if (c) { category = c; renderFilters(); render(); }
+});
+document.getElementById("grid").addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (card) openProduct(card.dataset.id);
+});
+document.getElementById("mClose").addEventListener("click", closeModal);
+document.getElementById("overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+init();
+</script>
+</body>
+</html>

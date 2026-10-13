@@ -29,3 +29,11 @@ Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de 
 
 ## Modelos 3D
 Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empezar. Formato `.glb`.
+
+## Dónde quedamos (2026-10-13)
+- Supabase (`kakkqkidixddqjzucrzv`): migraciones `setup` y `002`–`007` aplicadas; registro de usuarios cerrado.
+  Catálogo demo de 135 productos (SKU `DEMO-…`, precios de referencia y stock de prueba).
+- Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV y fotos en lote), `disenar.html`
+  (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom) y `tienda.html` (kiosco).
+- Pendiente: `whatsapp` de la tienda en `config.js`; ver los diseños guardados en `admin.html`;
+  cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

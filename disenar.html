@@ -50,6 +50,16 @@
   .viewbar{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:3}
   .viewbar .btn{padding:7px 12px;font-size:13px;box-shadow:var(--shadow-md)}
   .viewbar .btn.active{background:var(--text-primary);color:var(--surface);border-color:var(--text-primary)}
+  .zoombar{position:absolute;right:10px;top:56px;display:flex;flex-direction:column;gap:6px;z-index:3}
+  .zoombar .icon-btn{width:40px;height:40px;font-size:20px;box-shadow:var(--shadow-md);background:var(--surface)}
+  body.kiosk .zoombar .icon-btn{width:52px;height:52px;font-size:24px}
+  /* ampliado: el baño ocupa toda la pantalla; el panel se oculta */
+  body.expanded .topbar,body.expanded .side{display:none}
+  body.expanded .app{flex-direction:row}
+  body.expanded .stage{flex:1;height:auto}
+  body.expanded #fullBtn{background:var(--text-primary);color:var(--surface);border-color:var(--text-primary)}
+  .exp-total{position:absolute;left:12px;top:12px;z-index:3;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 12px;font-size:14px;box-shadow:var(--shadow-md);display:none}
+  body.expanded .exp-total{display:block}
   .hud{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;pointer-events:none;z-index:3}
   .hud > *{pointer-events:auto}
   .sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;box-shadow:var(--shadow-md);max-width:min(560px,100%)}
@@ -172,9 +182,15 @@
     <div class="viewbar">
       <button class="btn active" id="view3d" type="button">3D</button>
       <button class="btn" id="viewPlan" type="button">Planta</button>
-      <button class="btn" id="fullBtn" type="button" title="Pantalla completa" aria-label="Pantalla completa">⛶</button>
+      <button class="btn" id="fullBtn" type="button" title="Ver el baño en pantalla completa">⛶ Ampliar</button>
+    </div>
+    <div class="zoombar">
+      <button class="icon-btn" id="zoomIn" type="button" title="Acercar" aria-label="Acercar">+</button>
+      <button class="icon-btn" id="zoomOut" type="button" title="Alejar" aria-label="Alejar">−</button>
+      <button class="icon-btn" id="zoomFit" type="button" title="Ver todo el baño" aria-label="Ver todo el baño">⤢</button>
     </div>
     <div id="labels"></div>
+    <div class="exp-total" id="expTotal"></div>
     <div class="hint" id="hint" hidden></div>
     <div class="hud"><div class="sel" id="sel" hidden></div></div>
   </section>
@@ -310,6 +326,8 @@ ortho.lookAt(0, 0, 0);
 let camera = persp;
 let planMode = false;
 const controls = new OrbitControls(persp, renderer.domElement);
+let userMovedCamera = false;             // si el cliente giró o acercó, no se reencuadra solo
+controls.addEventListener("start", () => (userMovedCamera = true));
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 1;
@@ -342,7 +360,7 @@ function fitPlan() {
   Object.assign(ortho, { left: -vw / 2, right: vw / 2, top: vh / 2, bottom: -vh / 2 });
   ortho.updateProjectionMatrix();
 }
-new ResizeObserver(resize).observe(stage);
+new ResizeObserver(() => { resize(); if (!userMovedCamera) frameCamera(); }).observe(stage);
 
 // ── Cerámica: el diseño de la pieza dibujado (mármol, madera, cemento…) cuando aún no hay foto ──
 function shadeHex(c, amt) {
@@ -582,7 +600,6 @@ function buildRoom() {
     roomGroup.add(gap, arc);
   }
   roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = planMode; });
-  controls.target.set(0, 0.9, 0);
   fitPlan();
 }
 
@@ -1040,17 +1057,40 @@ function renderSummary() {
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
   lastRows = rows; lastTotal = total;
   $("footTotal").innerHTML = total ? `Total <b style="color:var(--text-primary)">${money.format(total)}</b>` : "";
+  $("expTotal").innerHTML = total ? `Total <b>${money.format(total)}</b>` : "";
   if (!savedCode) { $("codeArea").innerHTML = ""; $("waBtn").hidden = true; }
 }
 
 // ── Cámara y bucle ──
+// encuadre: la cámara se acerca hasta que el baño llena la vista (según su tamaño y la pantalla)
 function frameCamera() {
-  const { w, l } = state.room;
-  const r = Math.max(w, l);
-  persp.position.set(r * 0.9, r * 1.25 + 1, r * 1.35 + 0.8);
+  const { w, l, h } = state.room;
+  const target = new THREE.Vector3(0, h * 0.35, 0);
+  const dir = new THREE.Vector3(0.62, 0.72, 0.95).normalize();         // vista en diagonal, desde arriba
+  const radius = Math.sqrt(w * w + l * l + (h * 0.7) ** 2) / 2;
+  const vFov = THREE.MathUtils.degToRad(persp.fov);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * persp.aspect);
+  const dist = (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.0;   // el baño completo, lo más grande posible
+  controls.target.copy(target);
+  persp.position.copy(target).addScaledVector(dir, dist);
   controls.update();
+  userMovedCamera = false;
   fitPlan();
 }
+function zoom(factor) {
+  if (planMode) {
+    ortho.zoom = THREE.MathUtils.clamp(ortho.zoom / factor, 0.5, 4);
+    ortho.updateProjectionMatrix();
+    return;
+  }
+  const off = persp.position.clone().sub(controls.target).multiplyScalar(factor);
+  if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return;
+  persp.position.copy(controls.target).add(off);
+  controls.update();
+}
+$("zoomIn").onclick = () => zoom(0.8);
+$("zoomOut").onclick = () => zoom(1.25);
+$("zoomFit").onclick = () => { ortho.zoom = 1; ortho.updateProjectionMatrix(); frameCamera(); };
 function setView(plan) {
   planMode = plan;
   camera = plan ? ortho : persp;
@@ -1063,10 +1103,18 @@ function setView(plan) {
 }
 $("view3d").onclick = () => setView(false);
 $("viewPlan").onclick = () => setView(true);
-$("fullBtn").onclick = () => {
-  const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
-  p?.catch?.(() => {});
-};
+// Ampliar: oculta el panel y pasa a pantalla completa; el baño se vuelve a encuadrar
+function setExpanded(on) {
+  document.body.classList.toggle("expanded", on);
+  $("fullBtn").textContent = on ? "✕ Salir" : "⛶ Ampliar";
+  if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.()?.catch?.(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen?.()?.catch?.(() => {});
+  requestAnimationFrame(() => { resize(); frameCamera(); });
+}
+$("fullBtn").onclick = () => setExpanded(!document.body.classList.contains("expanded"));
+// si sale de pantalla completa con Esc, también se cierra el modo ampliado
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && document.body.classList.contains("expanded")) setExpanded(false); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("expanded")) setExpanded(false); });
 
 // cotas en planta (ancho y largo), como etiquetas HTML sobre el lienzo
 const fmtM = (m) => `${m.toLocaleString(C.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m`;

@@ -35,7 +35,6 @@
   <nav class="filters" id="tabs" hidden>
     <button class="chip active" type="button" data-tab="productos">Productos</button>
     <button class="chip" type="button" data-tab="disenos">Diseños guardados</button>
-    <button class="chip" type="button" data-tab="empresa">🏢 Mi empresa</button>
     <button class="chip" type="button" data-tab="tiendas" hidden>Tiendas</button>
   </nav>
 
@@ -309,6 +308,7 @@ function show(section) {
   $("myCompany").hidden = !S.store || section === "login";
   for (const [k, ids] of Object.entries(TABS)) ids.forEach((id) => { $(id).hidden = !main || k !== tab; });
   document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  $("myCompany").classList.toggle("btn-primary", main && tab === "empresa");
 }
 $("myCompany").addEventListener("click", () => { tab = "empresa"; show("listPanel"); });
 $("tabs").addEventListener("click", (e) => {

@@ -36,7 +36,13 @@
       <h2 style="margin:0">Productos</h2>
       <button class="btn btn-primary" id="newBtn">+ Nuevo producto</button>
     </div>
-    <div class="filters" id="listFilters"></div>
+    <div class="row" style="margin-bottom:8px">
+      <select class="input" id="listFilters" aria-label="Categoría" style="flex:1"></select>
+      <button class="icon-btn" id="addCat" type="button" title="Agregar categoría" aria-label="Agregar categoría">+</button>
+      <button class="icon-btn" id="delCat" type="button" title="Eliminar la categoría elegida" aria-label="Eliminar la categoría elegida" hidden>🗑</button>
+    </div>
+    <div id="catFormSlot"></div>
+    <div class="status" id="catStatus"></div>
     <div id="list"></div>
   </section>
 
@@ -50,7 +56,10 @@
       <form id="productForm">
         <div class="field"><label for="f-name">Nombre</label><input class="input" id="f-name" required maxlength="120" placeholder="ej: Sanitario One Piece Avanti"></div>
         <div class="row">
-          <div class="field" style="flex:1"><label for="f-category">Categoría</label><select class="input" id="f-category"></select></div>
+          <div class="field" style="flex:1"><label for="f-category">Categoría</label>
+            <div class="row"><select class="input" id="f-category" style="flex:1"></select>
+              <button class="icon-btn" id="addCat2" type="button" title="Agregar categoría" aria-label="Agregar categoría">+</button></div>
+            <div id="catFormSlot2"></div></div>
           <div class="field" style="flex:1"><label for="f-brand">Marca</label><input class="input" id="f-brand" maxlength="60" placeholder="ej: Corona"></div>
         </div>
         <div class="row">
@@ -151,8 +160,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="lambert.js"></script>
+<script src="ilustraciones.js"></script>
 <script>
-const { C, db, configured, CATEGORIES, categoryLabel, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage } = Lambert;
+const { C, db, configured, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id).value.trim(); return v === "" ? null : Number(v); };
 let products = [];
@@ -162,14 +172,20 @@ let listCategory = "all";
 document.title = `${C.storeName} · Administrar`;
 $("f-unit").addEventListener("change", () => { $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`; });
 $("f-unit").innerHTML = Object.entries(UNITS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
-$("f-category").innerHTML = CATEGORIES.map((c) => `<option value="${c.slug}">${esc(c.label)}</option>`).join("");
+function fillCategorySelect() {
+  const keep = $("f-category").value;
+  $("f-category").innerHTML = CATEGORIES.map((c) => `<option value="${esc(c.slug)}">${esc(c.label)}</option>`).join("");
+  if (CATEGORIES.some((c) => c.slug === keep)) $("f-category").value = keep;
+}
+fillCategorySelect();
 
 function show(section) {
   ["login", "listPanel", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
 }
 function status(id, msg, kind = "") { const el = $(id); el.textContent = msg; el.className = `status ${kind}`; }
 function notice(html) { $("notice").innerHTML = html; show("notice"); }
-const isTile = () => $("f-category").value === "ceramica";
+// cerámica = categoría "ceramica" o cualquier categoría nueva marcada como "cubre piso o paredes"
+const isTile = () => CATEGORIES.find((c) => c.slug === $("f-category").value)?.placement === "surface";
 
 // ── Sesión ──
 async function start() {
@@ -206,12 +222,17 @@ async function refreshList() {
 }
 
 function renderList() {
-  const used = CATEGORIES.filter((c) => products.some((p) => p.category === c.slug));
-  $("listFilters").innerHTML = used.length < 2 ? "" : [{ slug: "all", label: "Todo" }, ...used]
-    .map((c) => `<button class="chip ${c.slug === listCategory ? "active" : ""}" data-cat="${c.slug}">${esc(c.label)}</button>`).join("");
+  const count = (slug) => products.filter((p) => p.category === slug).length;
+  if (listCategory !== "all" && !CATEGORIES.some((c) => c.slug === listCategory)) listCategory = "all";
+  // todas las categorías (también las vacías, para poder eliminarlas)
+  $("listFilters").innerHTML = `<option value="all">Todas las categorías (${products.length})</option>` +
+    CATEGORIES.map((c) => `<option value="${esc(c.slug)}">${esc(c.label)} (${count(c.slug)})</option>`).join("");
+  $("listFilters").value = listCategory;
+  $("delCat").hidden = listCategory === "all";
+  fillCategorySelect();
   const list = products.filter((p) => listCategory === "all" || p.category === listCategory);
   $("list").innerHTML = list.length ? list.map((p) => {
-    const cover = p.photos[0] || p.spin[0] || p.variants.find((v) => v.texture)?.texture;
+    const cover = p.photos[0] || p.spin[0] || p.variants.find((v) => v.texture)?.texture || illustrate(p, p.variants[0]);
     const stock = p.variants.reduce((n, v) => n + (v.active ? v.stock : 0), 0);
     const extras = [
       [categoryLabel(p.category), p.subcategory].filter(Boolean).join(" / "),
@@ -226,7 +247,58 @@ function renderList() {
     </div>`;
   }).join("") : `<div class="empty"><strong>Aún no hay productos</strong>Crea el primero con “Nuevo producto”.</div>`;
 }
-$("listFilters").addEventListener("click", (e) => { if (e.target.dataset.cat) { listCategory = e.target.dataset.cat; renderList(); } });
+$("listFilters").addEventListener("change", (e) => { listCategory = e.target.value; status("catStatus", ""); renderList(); });
+
+// ── Categorías: crear y eliminar ──
+const PLACEMENTS = { floor: "En el piso (3D)", wall: "En la pared (3D)", surface: "Cerámica: cubre piso o paredes (3D)", none: "No se dibuja (solo cotización)" };
+function categoryForm(slot, onCreated) {
+  if (slot.firstChild) { slot.innerHTML = ""; return; } // segundo clic en + lo cierra
+  slot.innerHTML = `<form class="panel" style="margin:8px 0;padding:12px">
+    <div class="field"><label>Nombre de la categoría</label><input class="input" name="label" maxlength="60" required placeholder="ej: Calentadores de agua"></div>
+    <div class="field"><label>En el diseñador 3D</label><select class="input" name="placement">${Object.entries(PLACEMENTS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>
+    <div class="row"><button class="btn btn-primary" type="submit">Crear categoría</button><button class="btn" type="button" data-cancel>Cancelar</button></div>
+    <div class="status"></div></form>`;
+  const form = slot.querySelector("form");
+  const st = form.querySelector(".status");
+  form.querySelector("[data-cancel]").onclick = () => (slot.innerHTML = "");
+  form.label.focus();
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const label = form.label.value.trim();
+    const slug = slugify(label);
+    if (!slug) { st.textContent = "Escribe un nombre."; st.className = "status err"; return; }
+    if (CATEGORIES.some((c) => c.slug === slug)) { st.textContent = "Ya existe una categoría con ese nombre."; st.className = "status err"; return; }
+    const { error } = await db.from("categories").insert({ slug, label, placement: form.placement.value, position: CATEGORIES.length + 1 });
+    if (error) {
+      console.error(error);
+      st.textContent = /categories/.test(error.message) && error.code !== "23505" ? "Falta correr supabase/005-categorias-editables.sql." : "No se pudo crear.";
+      st.className = "status err";
+      return;
+    }
+    await loadCategories();
+    slot.innerHTML = "";
+    onCreated(slug, label);
+  };
+}
+$("addCat").addEventListener("click", () => categoryForm($("catFormSlot"), (slug, label) => {
+  listCategory = slug; renderList(); status("catStatus", `Categoría "${label}" creada ✓`, "ok");
+}));
+$("addCat2").addEventListener("click", () => categoryForm($("catFormSlot2"), (slug) => {
+  fillCategorySelect(); $("f-category").value = slug; $("f-category").dispatchEvent(new Event("change"));
+}));
+$("delCat").addEventListener("click", async () => {
+  const c = CATEGORIES.find((x) => x.slug === listCategory);
+  if (!c) return;
+  const n = products.filter((p) => p.category === c.slug).length;
+  if (n) return status("catStatus", `"${c.label}" tiene ${n} producto(s). Muévelos a otra categoría o elimínalos antes de borrarla.`, "err");
+  if (!confirm(`¿Eliminar la categoría "${c.label}"?`)) return;
+  const { error } = await db.from("categories").delete().eq("slug", c.slug);
+  if (error) { console.error(error); return status("catStatus", error.code === "23503" ? "Todavía tiene productos." : "No se pudo eliminar.", "err"); }
+  await loadCategories();
+  listCategory = "all";
+  renderList();
+  status("catStatus", `Categoría "${c.label}" eliminada ✓`, "ok");
+});
 $("list").addEventListener("click", (e) => {
   const item = e.target.closest(".list-item");
   if (item) openEditor(products.find((p) => p.id === item.dataset.id));
@@ -260,6 +332,7 @@ function syncCategoryFields() {
 }
 $("f-category").addEventListener("change", () => {
   const c = CATEGORIES.find((x) => x.slug === $("f-category").value);
+  if (!c) return;
   if (c.placement !== "surface") $("f-placement").value = c.placement;
   if (c.slug === "ceramica") $("f-unit").value = "m2";
   else if (c.slug === "pegantes") $("f-unit").value = "bulto";
@@ -283,7 +356,7 @@ function openEditor(p) {
   $("f-w").value = p?.width_cm ?? "";
   $("f-h").value = p?.height_cm ?? "";
   $("f-d").value = p?.depth_cm ?? "";
-  const catPlacement = CATEGORIES.find((c) => c.slug === $("f-category").value).placement;
+  const catPlacement = CATEGORIES.find((c) => c.slug === $("f-category").value)?.placement ?? "floor";
   $("f-placement").value = p && p.placement !== "surface" ? p.placement : (catPlacement === "surface" ? "floor" : catPlacement);
   $("f-tw").value = p?.tile_width_cm ?? "";
   $("f-th").value = p?.tile_height_cm ?? "";

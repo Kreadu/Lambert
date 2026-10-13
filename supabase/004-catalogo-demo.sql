@@ -63,7 +63,7 @@ insert into public.product_variants (product_id, name, color_hex, finish, sku, p
   ((select id from p), 'Beige', '#d9c9ad', 'antideslizante', 'DEMO-CER-008-03', null, 26, 2),
   ((select id from p), 'Negro', '#2a2a2a', 'antideslizante', 'DEMO-CER-008-04', 50000, 30, 3);
 
-with p as (insert into public.products (name, category, subcategory, unit, brand, sku, price, description, features, width_cm, height_cm, depth_cm, placement, tile_width_cm, tile_height_cm, surface_use, position) values ('Subway metro 7,5×15', 'ceramica', 'Subway / metro', 'm2', '', 'DEMO-CER-009', 85000, 'Ladrillo biselado tipo metro, ideal para la pared de la ducha o detrás del lavamanos.', '[{"label": "Biselado", "value": "Sí"}, {"label": "m² por caja", "value": "0,5"}]'::jsonb, null, null, null, 'surface', 7.5, 15, 'wall', 9) returning id)
+with p as (insert into public.products (name, category, subcategory, unit, brand, sku, price, description, features, width_cm, height_cm, depth_cm, placement, tile_width_cm, tile_height_cm, surface_use, position) values ('Subway metro 7,5×15', 'ceramica', 'Subway / metro', 'm2', '', 'DEMO-CER-009', 85000, 'Ladrillo biselado tipo metro, ideal para la pared de la ducha o detrás del lavamanos.', '[{"label": "Biselado", "value": "Sí"}, {"label": "m² por caja", "value": "0,5"}]'::jsonb, null, null, null, 'surface', 15, 7.5, 'wall', 9) returning id)
 insert into public.product_variants (product_id, name, color_hex, finish, sku, price, stock, position) values
   ((select id from p), 'Blanco', '#f6f6f4', 'brillante', 'DEMO-CER-009-01', null, 34, 0),
   ((select id from p), 'Negro', '#1f1f1f', 'brillante', 'DEMO-CER-009-02', null, 7, 1),

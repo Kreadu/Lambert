@@ -8,6 +8,8 @@
   const money = new Intl.NumberFormat(C.locale, { style: "currency", currency: C.currency, maximumFractionDigits: 0 });
 
   // Categorías del baño. placement: dónde va en el diseñador 3D (floor | wall | surface | none).
+  // Se cargan de la tabla `categories` (005); esta lista es el respaldo si aún no existe.
+  // Es la misma lista (se reemplaza su contenido), así que quien la desestructuró ve los cambios.
   const CATEGORIES = [
     { slug: "ceramica", label: "Cerámica y baldosas", placement: "surface" },
     { slug: "sanitarios", label: "Sanitarios", placement: "floor" },
@@ -24,6 +26,15 @@
   ];
   const categoryLabel = (slug) => CATEGORIES.find((c) => c.slug === slug)?.label ?? slug;
 
+  async function loadCategories() {
+    const { data, error } = await db.from("categories").select("slug, label, placement").order("position").order("label");
+    if (!error && data?.length) CATEGORIES.splice(0, CATEGORIES.length, ...data);
+    return { error };
+  }
+
+  /** Nombre → identificador: "Calentadores de agua" → "calentadores-de-agua". */
+  const slugify = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
   const UNITS = { unidad: "unidad", m2: "m²", caja: "caja", bulto: "bulto", kg: "kg", galon: "galón", metro: "metro", juego: "juego", tubo: "tubo" };
   const unitLabel = (u) => UNITS[u] ?? u;
 
@@ -37,11 +48,11 @@
 
   /** Productos con su media agrupada: { photos:[url], spin:[url], model:url|null }. */
   async function loadProducts() {
-    const { data, error } = await db
+    const [, { data, error }] = await Promise.all([loadCategories(), db
       .from("products")
       .select("*, product_media(id, kind, path, position), product_variants(*)")
       .order("position")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })]);
     if (error) throw error;
     return data.map((p) => {
       const media = (p.product_media || []).slice().sort((a, b) => a.position - b.position);
@@ -125,5 +136,5 @@
     return blob && blob.size < file.size ? blob : file;
   }
 
-  window.Lambert = { C, db, configured, CATEGORIES, categoryLabel, UNITS, unitLabel, money, esc, fileUrl, loadProducts, mountSpin, mountModel, compressImage };
+  window.Lambert = { C, db, configured, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, mountSpin, mountModel, compressImage };
 })();

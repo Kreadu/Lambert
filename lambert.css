@@ -24,6 +24,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* Búsqueda y filtros */
 .search-box{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface-muted);margin-bottom:12px}
 .search-box input{border:none;background:transparent;outline:none;width:100%;font-size:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.toolbar .search-box{flex:1 1 220px;margin-bottom:0}
+.toolbar select{flex:0 1 240px;min-width:0}
+@media (max-width:600px){.toolbar select{flex-basis:100%}}
+select.input{appearance:auto;cursor:pointer}
 .filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;scrollbar-width:none}
 .chip{padding:7px 16px;border:1px solid var(--border);border-radius:var(--radius-full);background:var(--surface);font-size:13px;cursor:pointer;white-space:nowrap;color:var(--text-secondary);font-weight:500;transition:all var(--transition)}
 .chip.active{background:var(--text-primary);color:var(--surface);border-color:var(--text-primary)}

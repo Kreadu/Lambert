@@ -105,7 +105,7 @@ tile("Antideslizante", "Piso antideslizante para ducha 30×30", 48000, 30, 30, "
      [("Antideslizante", "R11"), ("Piezas por caja", "11 (1 m²)")],
      v(("Blanco", "#efefec", "antideslizante", 1), ("Gris", "#9c9c99", "antideslizante", 1), ("Beige", "#d9c9ad", "antideslizante", 1),
        ("Negro", "#2a2a2a", "antideslizante", 1.05)))
-tile("Subway / metro", "Subway metro 7,5×15", 85000, 7.5, 15, "wall",
+tile("Subway / metro", "Subway metro 7,5×15", 85000, 15, 7.5, "wall",  # se instala horizontal: 15 de ancho
      "Ladrillo biselado tipo metro, ideal para la pared de la ducha o detrás del lavamanos.",
      [("Biselado", "Sí"), ("m² por caja", "0,5")],
      v(("Blanco", "#f6f6f4", "brillante", 1), ("Negro", "#1f1f1f", "brillante", 1), ("Verde botella", "#3f6650", "brillante", 1.05),

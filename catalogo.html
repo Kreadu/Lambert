@@ -15,11 +15,13 @@
 </div></header>
 
 <main class="wrap">
+  <div class="toolbar">
   <div class="search-box">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="search" id="search" placeholder="Buscar cerámica, sanitarios, lavamanos..." aria-label="Buscar productos">
   </div>
-  <div class="filters" id="filters"></div>
+  <select class="input" id="filters" aria-label="Categoría"></select>
+  </div>
   <div class="grid" id="grid">
     <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
   </div>
@@ -38,8 +40,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="lambert.js"></script>
+<script src="ilustraciones.js"></script>
 <script>
-const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, mountSpin, mountModel } = Lambert;
+const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, mountSpin, mountModel, illustrate } = Lambert;
 let products = [];
 let category = "all";
 let search = "";
@@ -66,19 +69,12 @@ async function init() {
 
 function renderFilters() {
   const used = CATEGORIES.filter((c) => products.some((p) => p.category === c.slug));
-  document.getElementById("filters").innerHTML = used.length < 2 ? "" : [{ slug: "all", label: "Todo" }, ...used]
-    .map((c) => `<button class="chip ${c.slug === category ? "active" : ""}" data-cat="${c.slug}">${esc(c.label)}</button>`)
-    .join("");
-}
-
-// Sin foto: el color de la variante y, en cerámica, el dibujo de las piezas con su junta
-function placeholder(p) {
-  const v = p.inStock[0] || p.variants[0];
-  const c = /^#[0-9a-f]{6}$/i.test(v?.color_hex || "") ? v.color_hex : "var(--surface-muted)";
-  if (p.category !== "ceramica" || !p.tile_width_cm) return `background:${c}`;
-  const k = 100 / Math.max(p.tile_width_cm, p.tile_height_cm); // escala: la pieza más grande ≈ 1/3 del cuadro
-  const w = Math.max(8, p.tile_width_cm * k * 0.6), h = Math.max(8, p.tile_height_cm * k * 0.6);
-  return `background:${c};background-image:linear-gradient(90deg,rgba(0,0,0,.18) 1px,transparent 1px),linear-gradient(rgba(0,0,0,.18) 1px,transparent 1px);background-size:${w}% ${h}%`;
+  const count = (slug) => products.filter((p) => p.category === slug).length;
+  const el = document.getElementById("filters");
+  el.hidden = used.length < 2;
+  el.innerHTML = `<option value="all">Todas las categorías (${products.length})</option>` +
+    used.map((c) => `<option value="${esc(c.slug)}">${esc(c.label)} (${count(c.slug)})</option>`).join("");
+  el.value = category;
 }
 
 const swatchStyle = (hex) => `background:${/^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "transparent"}`;
@@ -98,12 +94,13 @@ function render() {
     return;
   }
   grid.innerHTML = list.map((p) => {
-    const cover = p.photos[0] || p.spin[0] || p.inStock.find((v) => v.texture)?.texture || p.variants.find((v) => v.texture)?.texture;
+    const cover = p.photos[0] || p.spin[0] || p.inStock.find((v) => v.texture)?.texture || p.variants.find((v) => v.texture)?.texture
+      || illustrate(p, p.inStock[0] || p.variants[0]);
     const tags = [!p.available && "Agotado", p.spin.length && "360°", p.model && "3D"].filter(Boolean)
       .map((t) => `<span class="tag">${t}</span>`).join("");
     const many = new Set(p.inStock.map((v) => v.finalPrice)).size > 1;
     return `<button class="card" data-id="${p.id}">
-      <div class="card-img" ${cover ? "" : `style="${placeholder(p)}"`}>${cover ? `<img src="${esc(cover)}" alt="${esc(p.name)}" loading="lazy">` : ""}
+      <div class="card-img"><img src="${esc(cover)}" alt="${esc(p.name)}" ${cover.startsWith("data:") ? "" : `loading="lazy"`}>
         ${tags ? `<div class="tags">${tags}</div>` : ""}</div>
       <div class="card-info">
         <div class="muted">${esc([p.subcategory || categoryLabel(p.category), p.brand].filter(Boolean).join(" · "))}</div>
@@ -120,9 +117,10 @@ function openProduct(id) {
   const p = products.find((x) => x.id === id);
   if (!p) return;
   let variant = p.inStock[0] || null;
-  const tile = p.category === "ceramica";
+  const tile = p.placement === "surface";
   const views = () => [
     tile && variant?.texture && ["pieza", "Pieza"],
+    !p.photos.length && !p.spin.length && ["dibujo", "Ilustración"],
     p.photos.length && ["fotos", "Fotos"],
     p.spin.length > 1 && ["spin", "360°"],
     p.model && ["model", "3D"],
@@ -144,7 +142,7 @@ function openProduct(id) {
     const v = views();
     const price = variant ? variant.finalPrice : p.price;
     document.getElementById("mBody").innerHTML = `
-      <div class="viewer" id="viewer" ${v.length ? "" : `style="${placeholder(p)}"`}></div>
+      <div class="viewer" id="viewer"></div>
       ${v.length > 1 ? `<div class="view-tabs">${v.map(([k, l]) => `<button class="chip" data-view="${k}">${l}</button>`).join("")}</div>` : ""}
       <div class="thumbs" id="thumbs"></div>
       <div class="muted">${esc([categoryLabel(p.category), p.subcategory, p.brand].filter(Boolean).join(" · "))}</div>
@@ -173,7 +171,10 @@ function openProduct(id) {
     viewer.style.background = "";
     thumbs.innerHTML = "";
     document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === k));
-    if (k === "pieza") {
+    if (k === "dibujo") {
+      // ilustración de prueba con el color elegido (hasta que haya fotos reales)
+      viewer.innerHTML = `<img src="${esc(illustrate(p, variant || p.variants[0]))}" alt="${esc(p.name)}">`;
+    } else if (k === "pieza") {
       // la pieza repetida, como se vería instalada
       viewer.innerHTML = "";
       viewer.style.background = `url("${variant.texture}") 0 0 / 33.333% repeat`;
@@ -222,10 +223,7 @@ function closeModal() {
 }
 
 document.getElementById("search").addEventListener("input", (e) => { search = e.target.value; render(); });
-document.getElementById("filters").addEventListener("click", (e) => {
-  const c = e.target.dataset.cat;
-  if (c) { category = c; renderFilters(); render(); }
-});
+document.getElementById("filters").addEventListener("change", (e) => { category = e.target.value; render(); });
 document.getElementById("grid").addEventListener("click", (e) => {
   const card = e.target.closest(".card");
   if (card) openProduct(card.dataset.id);

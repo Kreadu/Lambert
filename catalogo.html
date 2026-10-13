@@ -157,7 +157,7 @@ function openProduct(id) {
         }).join("")}</div>
         <p class="muted" style="margin-top:6px">${variant ? (variant.stock <= 5 ? `¡Quedan ${variant.stock}!` : "Disponible") : "Agotado en todos los colores"}</p>` : ""}
       ${p.placement !== "none" ? `<a class="btn btn-primary" style="margin-top:12px;text-decoration:none;width:100%" id="useInDesign"
-        href="disenar.html?add=${p.id}${variant ? "&v=" + variant.id : ""}" ${p.available ? "" : "hidden"}>Usar en mi diseño de baño</a>` : ""}
+        href="disenar.html?add=${p.id}${variant ? "&v=" + variant.id : ""}${new URLSearchParams(location.search).get("modo") === "tienda" ? "&modo=tienda" : ""}" ${p.available ? "" : "hidden"}>Usar en mi diseño de baño</a>` : ""}
       ${p.description ? `<p class="desc" style="margin-top:12px">${esc(p.description)}</p>` : ""}
       ${spec.length ? `<div class="section">Ficha técnica</div><table class="features">${spec.map(([k, val]) =>
         `<tr><td>${k}</td><td>${val}</td></tr>`).join("")}</table>` : ""}`;
@@ -231,6 +231,16 @@ document.getElementById("grid").addEventListener("click", (e) => {
 document.getElementById("mClose").addEventListener("click", closeModal);
 document.getElementById("overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeModal(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+// modo tienda (pantalla en el local): vuelve al inicio si nadie la usa en 2 minutos
+if (new URLSearchParams(location.search).get("modo") === "tienda") {
+  document.querySelectorAll('a[href^="disenar.html"]').forEach((a) => (a.href += (a.href.includes("?") ? "&" : "?") + "modo=tienda"));
+  document.querySelector(".topbar .wrap").insertAdjacentHTML("afterbegin", `<a class="btn" href="tienda.html" style="text-decoration:none">← Inicio</a>`);
+  let t;
+  const arm = () => { clearTimeout(t); t = setTimeout(() => (location.href = "tienda.html"), 120000); };
+  ["pointerdown", "keydown", "wheel", "scroll"].forEach((ev) => addEventListener(ev, arm, { passive: true }));
+  arm();
+}
 
 init();
 </script>

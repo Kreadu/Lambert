@@ -11,39 +11,75 @@
   html,body{height:100%}
   body{display:flex;flex-direction:column;overflow:hidden}
   .app{flex:1;display:flex;min-height:0}
-  .side{width:360px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);padding:14px}
+  .side{width:380px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface);min-height:0}
+  .side-body{flex:1;overflow-y:auto;padding:14px}
+  .side-foot{border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:8px;align-items:center;background:var(--surface)}
   .stage{flex:1;position:relative;min-width:0;background:var(--surface-muted)}
   .stage canvas{display:block;width:100%;height:100%;touch-action:none}
   @media (max-width:800px){
     .app{flex-direction:column-reverse}
-    .side{width:100%;height:46vh;border-right:none;border-top:1px solid var(--border)}
-    .stage{flex:none;height:calc(54vh - 54px)}
+    .side{width:100%;height:50vh;flex:none;border-right:none;border-top:1px solid var(--border)}
+    .stage{flex:1;min-height:0}
+    .topbar .muted{display:none}
+    .topbar .btn{padding:7px 10px;font-size:13px}
+    .code-label{display:none}
+    #openCode::first-letter{text-transform:uppercase}
   }
-  .side h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-tertiary);margin:16px 0 8px}
-  .side h3:first-child{margin-top:0}
-  .presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .preset{text-align:left;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;font-size:13px}
-  .preset b{display:block;font-weight:600}
-  .preset.active{border-color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--text-primary)}
+  /* pasos */
+  .steps{display:flex;border-bottom:1px solid var(--border);background:var(--surface)}
+  .step{flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-size:12px;color:var(--text-tertiary);border-bottom:2px solid transparent;font-weight:500}
+  .step b{display:block;font-size:15px}
+  .step.active{color:var(--text-primary);border-bottom-color:var(--text-primary)}
+  .pane{display:none}.pane.active{display:block}
+  .pane h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-tertiary);margin:16px 0 8px}
+  .pane h3:first-child{margin-top:0}
+  /* baños de muestra */
+  .templates{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tpl{text-align:left;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;font-size:13px;display:flex;flex-direction:column;gap:2px}
+  .tpl b{font-weight:600;font-size:14px}
+  .tpl .plan{height:54px;margin-bottom:4px}
+  .tpl.active{border-color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--text-primary)}
   .dims{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .dims label{font-size:12px;color:var(--text-tertiary)}
-  .prod-list{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto}
+  .prod-list{display:flex;flex-direction:column;gap:4px}
   .prod{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;text-align:left;font-size:13px}
   .prod:hover{border-color:var(--text-tertiary)}
-  .prod .sw{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);flex-shrink:0}
+  .prod .sw{width:44px;height:44px;border-radius:6px;border:1px solid var(--border);flex-shrink:0;object-fit:cover}
   .prod span{flex:1;min-width:0}
-  .hud{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;pointer-events:none}
+  /* escenario */
+  .viewbar{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:3}
+  .viewbar .btn{padding:7px 12px;font-size:13px;box-shadow:var(--shadow-md)}
+  .viewbar .btn.active{background:var(--text-primary);color:var(--surface);border-color:var(--text-primary)}
+  .hud{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;pointer-events:none;z-index:3}
   .hud > *{pointer-events:auto}
-  .sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;box-shadow:var(--shadow-md);max-width:min(520px,100%)}
+  .sel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;box-shadow:var(--shadow-md);max-width:min(560px,100%)}
   .sel .pills{margin-top:6px}
-  .sel .pill{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .sel .pill{cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface)}
   .sel .pill.active{border-color:var(--text-primary);font-weight:600}
-  .hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:5px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
+  .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;font-size:13px;padding:6px 14px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:3}
+  .dimlabel{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-weight:600;pointer-events:none;font-variant-numeric:tabular-nums;z-index:2}
   .summary-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)}
   .summary-row span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
-  .total{display:flex;justify-content:space-between;font-weight:600;font-size:16px;padding-top:8px}
-  select.input{padding:8px 10px}
+  .total{display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding-top:8px}
   .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary)}
+  .code-box{text-align:center;padding:14px;border:1px dashed var(--text-tertiary);border-radius:var(--radius-lg);margin:10px 0}
+  .code-box .code{font-size:30px;font-weight:600;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+  .code-box #qr{display:flex;justify-content:center;margin:10px 0}
+  .code-box #qr img,.code-box #qr canvas{width:150px;height:150px}
+  /* modo tienda: todo más grande para pantallas táctiles */
+  body.kiosk .step{font-size:14px;padding:14px 4px}
+  body.kiosk .btn,body.kiosk .prod,body.kiosk .tpl{font-size:15px}
+  body.kiosk .side{width:440px}
+  .idle{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+  .idle .panel{max-width:360px;text-align:center}
+  /* impresión: solo el resumen */
+  @media print{
+    .topbar,.steps,.side-foot,.viewbar,.hud,.hint,.pane:not(#pane4),#saveArea button,.no-print{display:none!important}
+    body,html{overflow:visible;height:auto}
+    .app{display:block}.side{width:100%;border:none;height:auto}.side-body{overflow:visible}
+    .stage{height:420px;break-inside:avoid}
+    #pane4{display:block!important}
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -56,69 +92,170 @@
 <header class="topbar"><div class="wrap" style="max-width:none">
   <a class="brand" id="brand" href="catalogo.html" style="color:inherit;text-decoration:none">Catálogo</a>
   <span class="muted">· Diseña tu baño</span>
-  <a class="btn" href="catalogo.html" style="margin-left:auto;text-decoration:none">← Catálogo</a>
+  <div class="row" style="margin-left:auto">
+    <button class="btn no-print" id="openCode" type="button"><span class="code-label">Tengo un </span>código</button>
+    <a class="btn no-print" id="homeLink" href="catalogo.html" style="text-decoration:none">← Catálogo</a>
+  </div>
 </div></header>
 
 <div class="app">
   <aside class="side" id="side">
-    <h3>1 · Tu baño</h3>
-    <div class="presets" id="presets"></div>
-    <div class="dims" style="margin-top:8px">
-      <div><label for="rw">Ancho (m)</label><input class="input" id="rw" type="number" min="0.8" max="8" step="0.05"></div>
-      <div><label for="rl">Largo (m)</label><input class="input" id="rl" type="number" min="0.8" max="8" step="0.05"></div>
-      <div><label for="rh">Alto (m)</label><input class="input" id="rh" type="number" min="2" max="4" step="0.05"></div>
+    <nav class="steps" id="steps">
+      <button class="step active" data-step="1"><b>1</b>Tu baño</button>
+      <button class="step" data-step="2"><b>2</b>Piso y paredes</button>
+      <button class="step" data-step="3"><b>3</b>Productos</button>
+      <button class="step" data-step="4"><b>4</b>Resumen</button>
+    </nav>
+    <div class="side-body">
+      <section class="pane active" id="pane1">
+        <h3>Empieza con un baño de muestra</h3>
+        <div class="templates" id="templates"></div>
+        <h3>O ajusta las medidas de tu baño</h3>
+        <div class="dims">
+          <div><label for="rw">Ancho (m)</label><input class="input" id="rw" type="number" min="0.8" max="8" step="0.05" inputmode="decimal"></div>
+          <div><label for="rl">Largo (m)</label><input class="input" id="rl" type="number" min="0.8" max="8" step="0.05" inputmode="decimal"></div>
+          <div><label for="rh">Alto (m)</label><input class="input" id="rh" type="number" min="2" max="4" step="0.05" inputmode="decimal"></div>
+        </div>
+        <p class="muted" style="margin-top:6px">¿No trajiste las medidas? Elige el baño de muestra que más se parezca.</p>
+        <div class="row" style="margin-top:10px">
+          <div style="flex:1"><label class="muted" for="doorWall">Puerta en la pared</label>
+            <select class="input" id="doorWall">
+              <option value="front">Frente</option><option value="back">Fondo</option>
+              <option value="left">Izquierda</option><option value="right">Derecha</option>
+            </select></div>
+          <div style="flex:1"><label class="muted" for="doorPos">Posición</label>
+            <input id="doorPos" type="range" min="0" max="1" step="0.01" style="width:100%"></div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane2">
+        <h3>Piso</h3>
+        <div class="field"><select class="input" id="floorTile" aria-label="Cerámica del piso"></select></div>
+        <h3>Paredes</h3>
+        <div class="field"><select class="input" id="wallTile" aria-label="Cerámica de las paredes"></select></div>
+        <p class="muted">Se dibuja a escala real según el tamaño de la pieza. Solo aparecen colores con stock.</p>
+      </section>
+
+      <section class="pane" id="pane3">
+        <select class="input" id="cats" aria-label="Categoría" style="margin-bottom:8px"></select>
+        <div class="prod-list" id="prods"></div>
+        <p class="muted" style="margin-top:8px">Toca un producto para agregarlo. Luego arrástralo en el baño y tócalo para cambiar el color.</p>
+      </section>
+
+      <section class="pane" id="pane4">
+        <h3>Tu selección</h3>
+        <div id="summary"></div>
+        <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio. Precios sujetos a cambio.</p>
+        <div id="saveArea" style="margin-top:14px">
+          <div class="field"><label for="cName">Tu nombre <span class="muted">(opcional)</span></label><input class="input" id="cName" maxlength="80" autocomplete="name"></div>
+          <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para que te contactemos)</span></label><input class="input" id="cPhone" maxlength="30" inputmode="tel" autocomplete="tel"></div>
+          <button class="btn btn-primary" id="saveBtn" type="button" style="width:100%">Guardar mi diseño y obtener un código</button>
+          <div class="status" id="saveStatus"></div>
+          <div id="codeArea"></div>
+          <div class="row" style="flex-wrap:wrap;margin-top:8px">
+            <button class="btn" id="waBtn" type="button" hidden>Enviar por WhatsApp</button>
+            <button class="btn" id="printBtn" type="button">Imprimir</button>
+            <button class="btn" id="resetBtn" type="button">Empezar de nuevo</button>
+          </div>
+        </div>
+      </section>
     </div>
-    <div class="row" style="margin-top:8px">
-      <div style="flex:1"><label class="muted" for="doorWall">Puerta en la pared</label>
-        <select class="input" id="doorWall">
-          <option value="front">Frente</option><option value="back">Fondo</option>
-          <option value="left">Izquierda</option><option value="right">Derecha</option>
-        </select></div>
-      <div style="flex:1"><label class="muted" for="doorPos">Posición</label>
-        <input id="doorPos" type="range" min="0" max="1" step="0.01" style="width:100%"></div>
+    <div class="side-foot">
+      <span class="muted" id="footTotal" style="flex:1"></span>
+      <button class="btn" id="prevBtn" type="button">← Atrás</button>
+      <button class="btn btn-primary" id="nextBtn" type="button">Siguiente →</button>
     </div>
-
-    <h3>2 · Cerámica</h3>
-    <div class="field"><label for="floorTile">Piso</label><select class="input" id="floorTile"></select></div>
-    <div class="field"><label for="wallTile">Paredes</label><select class="input" id="wallTile"></select></div>
-
-    <h3>3 · Agrega productos</h3>
-    <select class="input" id="cats" aria-label="Categoría" style="margin-bottom:8px"></select>
-    <div class="prod-list" id="prods"></div>
-
-    <h3>Tu selección</h3>
-    <div id="summary"></div>
-    <p class="muted" style="margin-top:8px">Precios de referencia. La cerámica incluye 10 % de desperdicio.</p>
   </aside>
 
   <section class="stage" id="stage">
     <div class="loading" id="loading">Cargando…</div>
+    <div class="viewbar">
+      <button class="btn active" id="view3d" type="button">3D</button>
+      <button class="btn" id="viewPlan" type="button">Planta</button>
+      <button class="btn" id="fullBtn" type="button" title="Pantalla completa" aria-label="Pantalla completa">⛶</button>
+    </div>
+    <div id="labels"></div>
     <div class="hint" id="hint" hidden></div>
     <div class="hud"><div class="sel" id="sel" hidden></div></div>
   </section>
 </div>
 
+<div class="idle" id="idle" hidden><div class="panel">
+  <h2 style="font-size:18px;margin-bottom:6px">¿Sigues ahí?</h2>
+  <p class="muted">En <b id="idleSec">20</b> segundos empezamos un diseño nuevo para el siguiente cliente.</p>
+  <button class="btn btn-primary" id="idleStay" type="button" style="margin-top:12px;width:100%">Sigo diseñando</button>
+</div></div>
+
+<div class="overlay" id="codeDlg"><div class="modal" style="max-width:380px">
+  <div class="modal-head"><span class="modal-title">Abrir un diseño guardado</span><button class="icon-btn" id="codeClose" aria-label="Cerrar">✕</button></div>
+  <form id="codeForm"><div class="field"><label for="codeIn">Código</label><input class="input" id="codeIn" placeholder="BA-XXXX" maxlength="8" autocapitalize="characters" style="font-size:20px;letter-spacing:.08em;text-transform:uppercase"></div>
+  <button class="btn btn-primary" type="submit" style="width:100%">Abrir</button><div class="status" id="codeStatus"></div></form>
+</div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="lambert.js"></script>
 <script src="ilustraciones.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, illustrate } = Lambert;
+const { C, db, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
 document.title = `${C.storeName} · Diseña tu baño`;
 $("brand").textContent = C.storeName;
 
-// ── Baños estándar (ver docs/PLAN.md) ──
-const PRESETS = [
-  { id: "medio", name: "Medio baño", note: "social, sin ducha", w: 1.2, l: 1.5 },
-  { id: "pequeno", name: "Pequeño", note: "1,50 × 2,00", w: 1.5, l: 2.0 },
-  { id: "estandar", name: "Estándar", note: "1,80 × 2,40", w: 1.8, l: 2.4 },
-  { id: "principal", name: "Principal", note: "2,50 × 3,00", w: 2.5, l: 3.0 },
+// ── Baños de muestra (ver docs/PLAN.md): medidas estándar y productos ya ubicados ──
+// Cada producto se elige por categoría (+ palabra clave): así funcionan con el catálogo real, no con SKU fijos.
+// Coordenadas: x/z en metros desde el centro (z negativo = fondo); en pared, x es la posición a lo largo de ella.
+const TEMPLATES = [
+  { id: "medio", name: "Medio baño", note: "1,20 × 1,50 · social", room: { w: 1.2, l: 1.5, h: 2.4, doorWall: "front", doorPos: 0.5 },
+    items: ({ w, l }) => [
+      { cat: "sanitarios", q: /dos piezas/i, x: w / 2 - 0.3, z: -l / 2 + 0.34 },
+      { cat: "lavamanos", q: /pedestal/i, x: -w / 2 + 0.33, z: -l / 2 + 0.24 },
+      { cat: "espejos", q: /rectangular/i, wall: "back", x: -w / 2 + 0.33, y: 1.15 },
+      { cat: "accesorios", q: /portarrollo/i, wall: "right", x: l / 2 - 0.75, y: 0.65 },
+    ] },
+  { id: "pequeno", name: "Pequeño con ducha", note: "1,50 × 2,00", room: { w: 1.5, l: 2.0, h: 2.4, doorWall: "front", doorPos: 0.5 },
+    items: ({ w, l }) => [
+      { cat: "sanitarios", q: /dos piezas/i, x: -w / 2 + 0.35, z: -l / 2 + 0.35 },
+      { cat: "lavamanos", q: /suspendido/i, wall: "left", x: 0.35 },
+      { cat: "espejos", q: /rectangular/i, wall: "left", x: 0.35, y: 1.15 },
+      { cat: "tinas", q: /plato.*80/i, x: w / 2 - 0.4, z: -l / 2 + 0.4 },
+      { cat: "duchas", q: /redonda 20/i, wall: "back", x: w / 2 - 0.4 },
+      { cat: "griferia", q: /monocontrol de ducha/i, wall: "back", x: w / 2 - 0.4 },
+      { cat: "divisiones", q: /panel fijo/i, x: w / 2 - 0.8, z: -l / 2 + 0.45, rot: Math.PI / 2 },
+      { cat: "accesorios", q: /toallero de barra/i, wall: "right", x: -0.45 },
+    ] },
+  { id: "estandar", name: "Estándar", note: "1,80 × 2,40", room: { w: 1.8, l: 2.4, h: 2.4, doorWall: "front", doorPos: 0.5 },
+    items: ({ w, l }) => [
+      { cat: "muebles", q: /suspendido 60/i, wall: "left", x: 0.45 },
+      { cat: "espejos", q: /led.*60/i, wall: "left", x: 0.45, y: 1.1 },
+      { cat: "sanitarios", q: /one piece/i, x: -w / 2 + 0.45, z: -l / 2 + 0.36 },
+      { cat: "tinas", q: /plato.*80/i, x: w / 2 - 0.45, z: -l / 2 + 0.45 },
+      { cat: "duchas", q: /lluvia redonda 30/i, wall: "back", x: w / 2 - 0.45 },
+      { cat: "griferia", q: /desviador/i, wall: "back", x: w / 2 - 0.45 },
+      { cat: "duchas", q: /barra deslizable/i, wall: "right", x: l / 2 - 0.25 },
+      { cat: "divisiones", q: /batiente/i, x: w / 2 - 0.45, z: -l / 2 + 0.92 },
+      { cat: "accesorios", q: /toallero de barra/i, wall: "right", x: -0.3 },
+      { cat: "accesorios", q: /portarrollo/i, wall: "back", x: -w / 2 + 0.85, y: 0.65 },
+    ] },
+  { id: "principal", name: "Principal con tina", note: "2,50 × 3,00", room: { w: 2.5, l: 3.0, h: 2.5, doorWall: "front", doorPos: 0.75 },
+    items: ({ w, l }) => [
+      { cat: "muebles", q: /100 cm doble/i, x: -w / 2 + 0.24, z: 0.4, rot: Math.PI / 2 },
+      { cat: "espejos", q: /led.*60/i, wall: "left", x: 0.4, y: 1.1 },
+      { cat: "sanitarios", q: /suspendido/i, wall: "back", x: -w / 2 + 0.5 },
+      { cat: "tinas", q: /exenta/i, x: 0.25, z: -l / 2 + 0.5 },
+      { cat: "tinas", q: /plato.*70.120/i, x: w / 2 - 0.36, z: l / 2 - 0.7, rot: Math.PI / 2 },
+      { cat: "duchas", q: /techo empotrada/i, wall: "right", x: -(l / 2 - 0.7), y: 2.2 },
+      { cat: "griferia", q: /termostático/i, wall: "right", x: -(l / 2 - 0.7) },
+      { cat: "divisiones", q: /panel fijo/i, x: w / 2 - 0.72, z: l / 2 - 0.7, rot: Math.PI / 2 },
+      { cat: "accesorios", q: /toallero doble/i, wall: "right", x: 0.2 },
+    ] },
+  { id: "vacio", name: "Empezar de cero", note: "con tus medidas", room: null, items: () => [] },
 ];
 // Medidas por defecto (cm) si el producto no las tiene, y altura de montaje en pared (centro, m)
 const DEFAULT_DIMS = { sanitarios: [38, 76, 68], lavamanos: [55, 18, 45], griferia: [6, 16, 14], duchas: [22, 4, 22],
@@ -126,15 +263,22 @@ const DEFAULT_DIMS = { sanitarios: [38, 76, 68], lavamanos: [55, 18, 45], grifer
 const WALL_HEIGHT = { lavamanos: 0.8, griferia: 1.0, duchas: 2.05, espejos: 1.55, accesorios: 1.1, muebles: 0.6, sanitarios: 0.25 };
 const DOOR = { w: 0.8, h: 2.05 };
 
-// ── Estado (se guarda en este navegador) ──
-const saved = (() => { try { return JSON.parse(localStorage.getItem("lambert_diseno") || "null"); } catch { return null; } })();
-const state = saved?.room ? saved : {
-  room: { w: 1.8, l: 2.4, h: 2.4, preset: "estandar", doorWall: "front", doorPos: 0.75 },
+// ── Estado ──
+const qs = new URLSearchParams(location.search);
+// modo tienda (pantalla en el local): sin guardar en el navegador y vuelve al inicio si nadie la usa
+const KIOSK = qs.get("modo") === "tienda";
+if (KIOSK) { document.body.classList.add("kiosk"); $("homeLink").href = "tienda.html"; $("homeLink").textContent = "← Inicio"; }
+const emptyState = () => ({
+  room: { w: 1.8, l: 2.4, h: 2.4, preset: null, doorWall: "front", doorPos: 0.5 },
   floor: null, wall: null,         // { productId, variantId }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
-};
+});
+const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem("lambert_diseno") || "null"); } catch { return null; } })();
+const state = saved?.room ? saved : emptyState();
+let savedCode = null;               // código del diseño guardado (se borra si cambia algo)
 function persist() {
-  try { localStorage.setItem("lambert_diseno", JSON.stringify(state)); } catch { /* sin almacenamiento: solo esta sesión */ }
+  savedCode = null;
+  if (!KIOSK) try { localStorage.setItem("lambert_diseno", JSON.stringify(state)); } catch { /* sin almacenamiento: solo esta sesión */ }
 }
 
 let products = [];
@@ -156,8 +300,14 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(getComputedStyle(document.body).getPropertyValue("--surface-muted").trim() || "#f5f5f5");
 // ambiente de luz para que metales y espejos tengan qué reflejar
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
-const controls = new OrbitControls(camera, renderer.domElement);
+const persp = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);   // vista de planta (desde arriba)
+ortho.position.set(0, 20, 0);
+ortho.up.set(0, 0, -1);            // el fondo del baño arriba en la pantalla
+ortho.lookAt(0, 0, 0);
+let camera = persp;
+let planMode = false;
+const controls = new OrbitControls(persp, renderer.domElement);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 1;
@@ -178,8 +328,17 @@ let walls = [];   // { mesh, side, normal, along, length }
 function resize() {
   const { clientWidth: w, clientHeight: h } = stage;
   renderer.setSize(w, h, false);
-  camera.aspect = w / Math.max(h, 1);
-  camera.updateProjectionMatrix();
+  persp.aspect = w / Math.max(h, 1);
+  persp.updateProjectionMatrix();
+  fitPlan();
+}
+function fitPlan() {
+  const { clientWidth: cw, clientHeight: ch } = stage;
+  const aspect = cw / Math.max(ch, 1);
+  let vw = state.room.w + 1.0, vh = state.room.l + 1.0;
+  if (vw / vh < aspect) vw = vh * aspect; else vh = vw / aspect;
+  Object.assign(ortho, { left: -vw / 2, right: vw / 2, top: vh / 2, bottom: -vh / 2 });
+  ortho.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(stage);
 
@@ -279,11 +438,40 @@ function buildRoom() {
     wall.extra.push(edge);
     walls.push(wall);
   }
+  // contorno para la vista de planta (paredes de 10 cm vistas desde arriba)
+  const t = 0.1, outline = new THREE.MeshBasicMaterial({ color: "#3a3a3a" });
+  for (const [x, z, sx, sz] of [[0, -l / 2 - t / 2, w + 2 * t, t], [0, l / 2 + t / 2, w + 2 * t, t], [-w / 2 - t / 2, 0, t, l], [w / 2 + t / 2, 0, t, l]]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.02, sz), outline);
+    m.position.set(x, state.room.h + 0.05, z);
+    m.userData.planOnly = true;
+    roomGroup.add(m);
+  }
+  const dw = walls.find((x) => x.side === state.room.doorWall);
+  if (dw) { // hueco y barrido de la puerta en planta
+    const door = dw.extra[0];
+    const gap = new THREE.Mesh(new THREE.BoxGeometry(DOOR.w, 0.03, t + 0.02), new THREE.MeshBasicMaterial({ color: "#f4f1ea" }));
+    gap.position.set(door.position.x - dw.normal.x * t / 2, state.room.h + 0.07, door.position.z - dw.normal.z * t / 2);
+    gap.rotation.y = dw.rotY;
+    gap.userData.planOnly = true;
+    const arc = new THREE.Mesh(new THREE.RingGeometry(DOOR.w - 0.01, DOOR.w, 24, 1, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#9a7b5a", side: THREE.DoubleSide }));
+    arc.rotation.x = -Math.PI / 2;
+    arc.rotation.z = dw.rotY + Math.PI;
+    arc.position.set(door.position.x + dw.along.x * DOOR.w / 2, state.room.h + 0.06, door.position.z + dw.along.z * DOOR.w / 2);
+    arc.userData.planOnly = true;
+    roomGroup.add(gap, arc);
+  }
+  roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = planMode; });
   controls.target.set(0, 0.9, 0);
+  fitPlan();
 }
 
 // Vista "casa de muñecas": se ocultan las paredes que quedan entre la cámara y el baño
 function updateWallVisibility() {
+  if (planMode) {
+    for (const wl of walls) { wl.mesh.visible = false; wl.extra.forEach((e) => (e.visible = false)); }
+    itemsGroup.children.forEach((o) => (o.visible = true));
+    return;
+  }
   for (const wl of walls) {
     const toCam = camera.position.clone().sub(wl.mesh.position);
     const visible = toCam.dot(wl.normal) > 0;
@@ -345,7 +533,7 @@ function proxy(p, color) {
     }
     case "duchas": {
       add(new THREE.CylinderGeometry(w / 2, w / 2, Math.max(h, 0.02), 32), metal, 0, h / 2, d / 2);
-      add(new THREE.CylinderGeometry(0.012, 0.012, 0.35, 12).rotateX(Math.PI / 2), metal, 0, h, -0.1);
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 12).rotateX(Math.PI / 2), metal, 0, h, 0); // brazo hasta la pared
       break;
     }
     case "griferia": {
@@ -496,9 +684,9 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
   if (!obj) return; // vacío: OrbitControls gira la cámara; deselecciona al soltar si no hubo arrastre
   select(obj);
   const it = obj.userData.item;
-  const plane = it.wall
+  const plane = it.wall && !planMode
     ? new THREE.Plane().setFromNormalAndCoplanarPoint(walls.find((w) => w.side === it.wall).normal, obj.position)
-    : new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    : new THREE.Plane(new THREE.Vector3(0, 1, 0), it.wall ? -obj.position.y : 0);
   const hit = ray.ray.intersectPlane(plane, new THREE.Vector3());
   if (!hit) return;
   drag = { obj, plane, offset: obj.position.clone().sub(hit) };
@@ -515,13 +703,13 @@ renderer.domElement.addEventListener("pointermove", (e) => {
   if (it.wall) {
     const wl = walls.find((w) => w.side === it.wall);
     it.x = pos.clone().sub(wl.mesh.position).dot(wl.along);
-    it.y = pos.y;
+    if (!planMode) it.y = pos.y;
   } else { it.x = pos.x; it.z = pos.z; }
   placeObject(drag.obj);
   updateSelectionBox();
 });
 const endDrag = (e) => {
-  if (drag) { drag = null; controls.enabled = true; persist(); return; }
+  if (drag) { drag = null; controls.enabled = !planMode; persist(); return; }
   if (downAt && e && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) select(null);
   downAt = null;
 };
@@ -576,9 +764,28 @@ function renderSelection() {
   });
 }
 
-// ── Panel lateral ──
+// ── Paso 1: el baño ──
+function planThumb(t) {
+  // miniatura en planta: el baño a escala y sus productos como rectángulos
+  const room = t.room || state.room;
+  const k = 50 / Math.max(room.w, room.l);
+  const W = room.w * k, L = room.l * k;
+  const boxes = t.items(room).map((it) => {
+    const d = DEFAULT_DIMS[it.cat] || [40, 40, 40];
+    const rot = Math.round((it.rot || 0) / (Math.PI / 2)) % 2 !== 0;
+    let bw = (rot ? d[2] : d[0]) / 100 * k, bl = (rot ? d[0] : d[2]) / 100 * k, cx, cz;
+    if (it.wall === "back") { cx = it.x * k; cz = -L / 2 + bl / 2; }
+    else if (it.wall === "front") { cx = -it.x * k; cz = L / 2 - bl / 2; }
+    else if (it.wall === "left") { [bw, bl] = [bl, bw]; cx = -W / 2 + bw / 2; cz = it.x * k; }
+    else if (it.wall === "right") { [bw, bl] = [bl, bw]; cx = W / 2 - bw / 2; cz = -it.x * k; }
+    else { cx = it.x * k; cz = it.z * k; }
+    return `<rect x="${cx - bw / 2}" y="${cz - bl / 2}" width="${bw}" height="${bl}" rx="1" fill="${it.cat === "divisiones" ? "#9fc3cc" : "#c9b79c"}"/>`;
+  }).join("");
+  return `<svg class="plan" viewBox="${-W / 2 - 3} ${-L / 2 - 3} ${W + 6} ${L + 6}"><rect x="${-W / 2}" y="${-L / 2}" width="${W}" height="${L}" fill="#f4f1ea" stroke="#3a3a3a" stroke-width="2"/>${boxes}</svg>`;
+}
 function renderRoomForm() {
-  $("presets").innerHTML = PRESETS.map((p) => `<button class="preset ${state.room.preset === p.id ? "active" : ""}" data-preset="${p.id}"><b>${p.name}</b><span class="muted">${p.note}</span></button>`).join("");
+  $("templates").innerHTML = TEMPLATES.map((t) => `<button class="tpl ${state.room.preset === t.id ? "active" : ""}" data-tpl="${t.id}">
+    ${planThumb(t)}<b>${t.name}</b><span class="muted">${t.note}</span></button>`).join("");
   $("rw").value = state.room.w; $("rl").value = state.room.l; $("rh").value = state.room.h;
   $("doorWall").value = state.room.doorWall; $("doorPos").value = state.room.doorPos;
 }
@@ -589,12 +796,41 @@ function roomChanged() {
   frameCamera();
   persist(); renderSummary();
 }
-$("presets").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-preset]");
-  if (!b) return;
-  const p = PRESETS.find((x) => x.id === b.dataset.preset);
-  Object.assign(state.room, { w: p.w, l: p.l, preset: p.id });
-  renderRoomForm(); roomChanged();
+// elige un producto con stock de la categoría (el que coincide con la palabra clave, si hay)
+function pickProduct(cat, q) {
+  const list = products.filter((p) => p.category === cat && p.available);
+  return list.find((p) => q?.test(`${p.subcategory} ${p.name}`)) || list[0] || null;
+}
+async function applyTemplate(id) {
+  const t = TEMPLATES.find((x) => x.id === id);
+  if (state.items.length && !confirm("¿Cambiar al baño de muestra? Se reemplaza lo que tienes.")) return;
+  if (t.room) Object.assign(state.room, t.room);
+  state.room.preset = t.id;
+  state.items = [];
+  for (const spec of t.items(state.room)) {
+    const p = pickProduct(spec.cat, spec.q);
+    if (!p) continue;
+    const it = { uid: crypto.randomUUID(), productId: p.id, variantId: p.inStock[0]?.id ?? null, x: spec.x, y: 0, z: spec.z ?? 0, rot: spec.rot || 0, wall: null };
+    if (spec.wall || p.placement === "wall") {
+      it.wall = spec.wall || "back";
+      const [, h] = dimsOf(p);
+      it.y = spec.y ?? Math.max(0, (WALL_HEIGHT[p.category] ?? 1.0) - h / 2);
+    }
+    state.items.push(it);
+  }
+  if (t.items(state.room).length) { // cerámica de muestra si no eligió ninguna
+    const tile = (use, q) => { const p = products.find((x) => x.placement === "surface" && x.unit === "m2" && x.available && (x.surface_use === "both" || x.surface_use === use) && q.test(x.name)); return p ? { productId: p.id, variantId: p.inStock[0].id } : null; };
+    state.floor ||= tile("floor", /porcelanato/i);
+    state.wall ||= tile("wall", /pared/i);
+  }
+  select(null);
+  renderRoomForm(); renderTileSelects();
+  buildRoom(); await rebuildItems();
+  frameCamera(); persist(); renderSummary();
+}
+$("templates").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tpl]");
+  if (b) applyTemplate(b.dataset.tpl);
 });
 for (const id of ["rw", "rl", "rh"]) $(id).addEventListener("change", () => {
   const val = (x, lo, hi) => THREE.MathUtils.clamp(Number(x) || lo, lo, hi);
@@ -641,6 +877,7 @@ $("prods").addEventListener("click", (e) => {
   if (b) addProduct(byId(b.dataset.add));
 });
 
+let lastRows = [], lastTotal = 0;
 function renderSummary() {
   const { w, l, h } = state.room;
   const rows = [];
@@ -674,14 +911,46 @@ function renderSummary() {
     ? rows.map(([t, s]) => `<div class="summary-row"><span>${esc(t)}</span><span>${money.format(s)}</span></div>`).join("") +
       `<div class="total"><span>Total</span><span>${money.format(total)}</span></div>`
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
+  lastRows = rows; lastTotal = total;
+  $("footTotal").innerHTML = total ? `Total <b style="color:var(--text-primary)">${money.format(total)}</b>` : "";
+  if (!savedCode) { $("codeArea").innerHTML = ""; $("waBtn").hidden = true; }
 }
 
 // ── Cámara y bucle ──
 function frameCamera() {
   const { w, l } = state.room;
   const r = Math.max(w, l);
-  camera.position.set(r * 0.9, r * 1.25 + 1, r * 1.35 + 0.8);
+  persp.position.set(r * 0.9, r * 1.25 + 1, r * 1.35 + 0.8);
   controls.update();
+  fitPlan();
+}
+function setView(plan) {
+  planMode = plan;
+  camera = plan ? ortho : persp;
+  controls.enabled = !plan;
+  $("view3d").classList.toggle("active", !plan);
+  $("viewPlan").classList.toggle("active", plan);
+  roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = plan; });
+  if (!plan) $("labels").innerHTML = "";
+  updateWallVisibility();
+}
+$("view3d").onclick = () => setView(false);
+$("viewPlan").onclick = () => setView(true);
+$("fullBtn").onclick = () => {
+  const p = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+  p?.catch?.(() => {});
+};
+
+// cotas en planta (ancho y largo), como etiquetas HTML sobre el lienzo
+const fmtM = (m) => `${m.toLocaleString(C.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m`;
+function updateLabels() {
+  ortho.updateMatrixWorld(); // la posición de la cámara de planta, aunque todavía no se haya dibujado
+  const { w, l } = state.room;
+  const put = (x, z, text) => {
+    const v = new THREE.Vector3(x, 0, z).project(ortho);
+    return `<span class="dimlabel" style="left:${(v.x + 1) / 2 * stage.clientWidth}px;top:${(1 - v.y) / 2 * stage.clientHeight}px">${text}</span>`;
+  };
+  $("labels").innerHTML = put(0, -l / 2 - 0.3, fmtM(w)) + put(w / 2 + 0.38, 0, fmtM(l));
 }
 let hintTimer;
 function flash(msg) {
@@ -691,7 +960,8 @@ function flash(msg) {
   hintTimer = setTimeout(() => (h.hidden = true), 2500);
 }
 renderer.setAnimationLoop(() => {
-  controls.update();
+  if (!planMode) controls.update();
+  else updateLabels();
   updateWallVisibility();
   if (selected && drag) updateSelectionBox();
   renderer.render(scene, camera);
@@ -716,11 +986,16 @@ async function init() {
   buildRoom();
   await rebuildItems();
   renderSummary();
+  // diseño guardado: disenar.html?d=BA-XXXX · baño de muestra: ?plantilla=estandar
+  if (qs.get("d")) await openCode(qs.get("d"));
+  else if (qs.get("plantilla") && TEMPLATES.some((t) => t.id === qs.get("plantilla"))) {
+    Object.assign(state, emptyState());
+    await applyTemplate(qs.get("plantilla"));
+  }
   // desde el catálogo: disenar.html?add=<producto>&v=<variante>
-  const qs = new URLSearchParams(location.search);
   const toAdd = qs.get("add") && byId(qs.get("add"));
   if (toAdd) {
-    history.replaceState(null, "", location.pathname);
+    history.replaceState(null, "", location.pathname + (KIOSK ? "?modo=tienda" : ""));
     if (toAdd.placement === "surface") {
       const vid = qs.get("v") || toAdd.inStock[0]?.id;
       const key = toAdd.surface_use === "wall" ? "wall" : "floor";
@@ -731,10 +1006,122 @@ async function init() {
       await addProduct(toAdd, qs.get("v"));
     }
   }
-  if (!state.items.length && !toAdd) flash("Elige tu baño, la cerámica y agrega productos");
+  if (!state.items.length && !toAdd && !qs.get("d")) flash("Elige un baño de muestra o escribe tus medidas");
+  if (state.items.length) showStep(3);
   // primer cuadro de inmediato (sin esperar al bucle de animación)
   controls.update(); updateWallVisibility(); renderer.render(scene, camera);
 }
+// ── Pasos ──
+let step = 1;
+function showStep(n) {
+  step = Math.min(4, Math.max(1, n));
+  document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("active", p.id === `pane${step}`));
+  document.querySelectorAll(".step").forEach((b) => b.classList.toggle("active", Number(b.dataset.step) === step));
+  $("prevBtn").hidden = step === 1;
+  $("nextBtn").hidden = step === 4;
+  $("nextBtn").textContent = step === 3 ? "Ver resumen →" : "Siguiente →";
+  document.querySelector(".side-body").scrollTop = 0;
+}
+$("steps").addEventListener("click", (e) => { const b = e.target.closest("[data-step]"); if (b) showStep(Number(b.dataset.step)); });
+$("prevBtn").onclick = () => showStep(step - 1);
+$("nextBtn").onclick = () => showStep(step + 1);
+showStep(1);
+
+// ── Guardar con código, abrir por código, WhatsApp, imprimir ──
+const designUrl = (code) => `${location.origin}${location.pathname}?d=${code}`;
+$("saveBtn").onclick = async () => {
+  const st = (m, k = "") => { $("saveStatus").textContent = m; $("saveStatus").className = `status ${k}`; };
+  if (!state.items.length && !state.floor && !state.wall) return st("Agrega algo a tu baño antes de guardarlo.", "err");
+  $("saveBtn").disabled = true; st("Guardando…");
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, items: state.items };
+  const { data: code, error } = await db.rpc("save_design", {
+    p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(), p_phone: $("cPhone").value.trim(), p_source: KIOSK ? "tienda" : "web",
+  });
+  $("saveBtn").disabled = false;
+  if (error) { console.error(error); return st(/save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); }
+  st("");
+  savedCode = code;
+  $("codeArea").innerHTML = `<div class="code-box"><div class="muted">Tu código</div><div class="code">${esc(code)}</div>
+    <div id="qr"></div><div class="muted">Escanéalo para seguir en tu celular, o dale el código al asesor.</div></div>`;
+  if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
+  $("waBtn").hidden = false;
+};
+$("waBtn").onclick = () => {
+  const lines = lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n");
+  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${fmtM(state.room.w)} × ${fmtM(state.room.l)}):\n${lines}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
+  const num = (C.whatsapp || "").replace(/\D/g, "");
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+};
+// para imprimir, el lienzo 3D se convierte en imagen (los navegadores no imprimen WebGL)
+let printImg = null;
+addEventListener("beforeprint", () => {
+  renderer.render(scene, camera);
+  printImg = new Image();
+  printImg.src = renderer.domElement.toDataURL("image/png");
+  printImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:4";
+  stage.appendChild(printImg);
+});
+addEventListener("afterprint", () => { printImg?.remove(); printImg = null; });
+$("printBtn").onclick = () => { showStep(4); setTimeout(() => print(), 50); };
+
+async function loadDesign(data) {
+  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, items: data.items || [] });
+  state.items = state.items.filter((it) => byId(it.productId));
+  select(null);
+  renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
+  frameCamera(); renderSummary();
+}
+async function openCode(raw) {
+  const code = String(raw).trim().toUpperCase();
+  const { data, error } = await db.rpc("get_design", { p_code: code });
+  if (error || !data) return false;
+  await loadDesign(data);
+  savedCode = code;
+  showStep(3);
+  flash(`Diseño ${code} abierto`);
+  return true;
+}
+$("openCode").onclick = () => { $("codeDlg").classList.add("open"); $("codeIn").value = ""; $("codeStatus").textContent = ""; setTimeout(() => $("codeIn").focus(), 50); };
+$("codeClose").onclick = () => $("codeDlg").classList.remove("open");
+$("codeForm").onsubmit = async (e) => {
+  e.preventDefault();
+  let v = $("codeIn").value.trim().toUpperCase();
+  if (/^[A-Z0-9]{4}$/.test(v)) v = "BA-" + v;
+  $("codeStatus").textContent = "Buscando…"; $("codeStatus").className = "status";
+  if (await openCode(v)) $("codeDlg").classList.remove("open");
+  else { $("codeStatus").textContent = "No encontramos ese código."; $("codeStatus").className = "status err"; }
+};
+
+async function resetAll() {
+  Object.assign(state, emptyState());
+  savedCode = null;
+  $("cName").value = ""; $("cPhone").value = ""; $("saveStatus").textContent = "";
+  select(null);
+  setView(false);
+  renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
+  frameCamera(); persist(); renderSummary(); showStep(1);
+}
+$("resetBtn").onclick = () => { if (confirm("¿Borrar este diseño y empezar de nuevo?")) resetAll(); };
+
+// ── Modo tienda: si nadie toca la pantalla en 3 minutos, vuelve al inicio para el siguiente cliente ──
+if (KIOSK) {
+  let idleTimer, countdown;
+  const arm = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      let n = 20;
+      $("idleSec").textContent = n; $("idle").hidden = false;
+      countdown = setInterval(() => {
+        $("idleSec").textContent = --n;
+        if (n <= 0) { clearInterval(countdown); location.href = "tienda.html"; }
+      }, 1000);
+    }, 180000);
+  };
+  $("idleStay").onclick = () => { clearInterval(countdown); $("idle").hidden = true; arm(); };
+  ["pointerdown", "keydown", "wheel"].forEach((ev) => addEventListener(ev, () => { if ($("idle").hidden) arm(); }, { passive: true }));
+  arm();
+}
+
 init();
 </script>
 </body>

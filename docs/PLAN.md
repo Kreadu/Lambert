@@ -7,9 +7,9 @@ donde arma su baño con esos productos y cambia colores y acabados **solo entre 
 Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de cada variante.
 
 ## Etapas
-1. **Catálogo de baño** (hecha en código; falta probarla con datos): categorías, medidas, cerámica
+1. **Catálogo de baño** (hecha): categorías, medidas, cerámica
    (tamaño de la pieza y textura), variantes con SKU, precio y stock.
-2. **Diseñador 3D básico**:
+2. **Diseñador 3D** (hecho: `disenar.html` + `tienda.html`, baños de muestra amoblados, vista de planta, modo tienda):
    - **El baño**: el cliente puede traer las medidas o no.
      - **Baños estándar** para elegir (ancho × largo, alto 2,40 m):
        - Medio baño (social, sin ducha): 1,20 × 1,50 m
@@ -22,8 +22,8 @@ Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de 
    - Agregar productos del catálogo y **arrastrarlos libremente** (piso o pared, según su ubicación), girarlos y borrarlos.
    - Tocar un producto para cambiar su color o acabado entre las variantes con stock.
    - Si un producto no tiene modelo 3D, se muestra una caja con sus medidas y su color.
-3. **Cotización**: lista de productos con cantidades (la cerámica, calculada en m² según el área), total,
-   envío por WhatsApp y guardar el diseño con un enlace.
+3. **Cotización** (hecha): total con cerámica en m², código BA-XXXX con QR, WhatsApp e impresión (`006`).
+   Pendiente: ver los diseños guardados en `admin.html`.
 4. **Después**: baños en L, ventanas, varias paredes de ducha (vidrio), vista en realidad aumentada y
    conexión del stock con Miel.
 

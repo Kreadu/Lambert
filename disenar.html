@@ -143,13 +143,23 @@
         <div class="field"><select class="input" id="floorTile" aria-label="Cerámica del piso"></select></div>
         <h3>Paredes</h3>
         <div class="field"><select class="input" id="wallTile" aria-label="Cerámica de las paredes"></select></div>
+        <label class="row" style="font-size:14px;margin:4px 0 8px"><input type="checkbox" id="eachWall"> Un diseño distinto en cada pared</label>
+        <div id="eachWallBox" hidden>
+          <div class="field"><label for="wt-back">Pared del fondo</label><select class="input wall-one" id="wt-back" data-side="back"></select></div>
+          <div class="field"><label for="wt-left">Pared izquierda</label><select class="input wall-one" id="wt-left" data-side="left"></select></div>
+          <div class="field"><label for="wt-right">Pared derecha</label><select class="input wall-one" id="wt-right" data-side="right"></select></div>
+          <div class="field"><label for="wt-front">Pared del frente (la de la puerta)</label><select class="input wall-one" id="wt-front" data-side="front"></select></div>
+          <p class="muted">"Igual que arriba" usa la cerámica general de las paredes.</p>
+        </div>
         <p class="muted">Se dibuja a escala real según el tamaño de la pieza. Solo aparecen colores con stock.</p>
       </section>
 
       <section class="pane" id="pane3">
         <select class="input" id="cats" aria-label="Categoría" style="margin-bottom:8px"></select>
         <div class="prod-list" id="prods"></div>
-        <p class="muted" style="margin-top:8px">Toca un producto para agregarlo. Luego arrástralo en el baño y tócalo para cambiar el color.</p>
+        <p class="muted" style="margin-top:8px">Toca un producto para agregarlo. Luego arrástralo en el baño.</p>
+        <h3>En tu baño <span class="muted" style="text-transform:none;letter-spacing:0">· cambia el color de cada uno</span></h3>
+        <div class="prod-list" id="placed"></div>
       </section>
 
       <section class="pane" id="pane4">
@@ -278,6 +288,8 @@ const DEFAULT_DIMS = { sanitarios: [38, 76, 68], lavamanos: [55, 18, 45], grifer
   divisiones: [120, 190, 4], tinas: [150, 50, 70], muebles: [60, 50, 46], espejos: [60, 80, 3], accesorios: [40, 6, 8] };
 const WALL_HEIGHT = { lavamanos: 0.8, griferia: 1.0, duchas: 2.05, espejos: 1.55, accesorios: 1.1, muebles: 0.6, sanitarios: 0.25 };
 const DOOR = { w: 0.8, h: 2.05 };
+// la propia de esa pared (o "sin cerámica" a propósito), o la general
+const wallTileOf = (side) => (state.walls?.[side] ? (state.walls[side].productId ? state.walls[side] : null) : state.wall);
 const isBidetSpray = (p) => /higiénica/i.test(`${p.subcategory} ${p.name}`);
 const mountHeight = (p) => (isBidetSpray(p) ? 0.6 : WALL_HEIGHT[p.category] ?? 1.0);
 
@@ -289,6 +301,7 @@ if (KIOSK) { document.body.classList.add("kiosk"); $("homeLink").href = "tienda.
 const emptyState = () => ({
   room: { w: 1.8, l: 2.4, h: 2.4, preset: null, doorWall: "front", doorPos: 0.5 },
   floor: null, wall: null,         // { productId, variantId }
+  walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
 });
 const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem("lambert_diseno") || "null"); } catch { return null; } })();
@@ -311,13 +324,14 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; // evita blancos "quemados" con el ambiente de luz
-renderer.toneMappingExposure = 0.9;
+// sin tone mapping: ACES convertía el blanco en gris/beige. La luz se ajusta para que el blanco dé blanco.
+renderer.toneMapping = THREE.NoToneMapping;
 stage.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(getComputedStyle(document.body).getPropertyValue("--surface-muted").trim() || "#f5f5f5");
 // ambiente de luz para que metales y espejos tengan qué reflejar
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const ENV_SOFT = 0.35; // reflejo del ambiente en loza y cerámica (los metales usan más)
 const persp = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);   // vista de planta (desde arriba)
 ortho.position.set(0, 20, 0);
@@ -332,9 +346,9 @@ controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 1;
 controls.maxDistance = 12;
-scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d2c8, 0.9));
+scene.add(new THREE.HemisphereLight(0xffffff, 0xececec, 1.35)); // luz neutra (antes tenía tono cálido)
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.intensity = 1.0;
+sun.intensity = 0.9;
 sun.position.set(2, 5, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -530,7 +544,7 @@ function surfaceMaterial(sel, w, h, fallback) {
   tex.needsUpdate = true;
   base.userData.clones.push(tex);
   tex.repeat.set(w / base.userData.tw, h / base.userData.th);
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, envMapIntensity: 0.5 });
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, envMapIntensity: ENV_SOFT });
 }
 
 // ── Habitación ──
@@ -553,7 +567,7 @@ function buildRoom() {
     { side: "right", len: l, pos: [w / 2, h / 2, 0], rotY: -Math.PI / 2, normal: [-1, 0, 0], along: [0, 0, -1] },
   ];
   for (const d of defs) {
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(d.len, h), surfaceMaterial(state.wall, d.len, h, "#f3f1ec"));
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(d.len, h), surfaceMaterial(wallTileOf(d.side), d.len, h, "#f6f6f4"));
     mesh.position.set(...d.pos);
     mesh.rotation.y = d.rotY;
     mesh.receiveShadow = true;
@@ -631,7 +645,7 @@ function dimsOf(p) {
   return [(p.width_cm || d[0]) / 100, (p.height_cm || d[1]) / 100, (p.depth_cm || d[2]) / 100];
 }
 function mat(color, opts = {}) {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0, ...opts });
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0, envMapIntensity: ENV_SOFT, ...opts });
 }
 
 // Forma aproximada cuando el producto aún no tiene modelo 3D (a escala con sus medidas)
@@ -640,7 +654,7 @@ function proxy(p, color) {
   const g = new THREE.Group();
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
   const ceramic = mat(color, { roughness: 0.15 });
-  const metal = mat(color, { metalness: 0.9, roughness: 0.25 });
+  const metal = mat(color, { metalness: 0.9, roughness: 0.25, envMapIntensity: 1 });
   const sub = (p.subcategory || "").toLowerCase();
   switch (p.category) {
     case "sanitarios": {
@@ -990,12 +1004,34 @@ function tileOptions(use) {
     `<optgroup label="${esc(p.name)}">${p.variants.filter((v) => v.active).map((v) =>
       `<option value="${p.id}|${v.id}" ${v.stock <= 0 ? "disabled" : ""}>${esc(v.name)}${v.stock <= 0 ? " (agotado)" : ""} · ${money.format(v.finalPrice)}/m²</option>`).join("")}</optgroup>`).join("");
 }
+const selKey = (sel) => (sel ? `${sel.productId}|${sel.variantId}` : "");
 function renderTileSelects() {
   $("floorTile").innerHTML = tileOptions("floor");
   $("wallTile").innerHTML = tileOptions("wall");
-  $("floorTile").value = state.floor ? `${state.floor.productId}|${state.floor.variantId}` : "";
-  $("wallTile").value = state.wall ? `${state.wall.productId}|${state.wall.variantId}` : "";
+  $("floorTile").value = selKey(state.floor);
+  $("wallTile").value = selKey(state.wall);
+  state.walls ||= {};
+  const own = Object.values(state.walls).some(Boolean);
+  $("eachWall").checked = own || $("eachWall").checked;
+  $("eachWallBox").hidden = !$("eachWall").checked;
+  document.querySelectorAll(".wall-one").forEach((el) => {
+    el.innerHTML = `<option value="same">Igual que arriba</option>` + tileOptions("wall");
+    el.value = state.walls[el.dataset.side] ? selKey(state.walls[el.dataset.side]) : "same";
+  });
 }
+$("eachWall").addEventListener("change", (e) => {
+  $("eachWallBox").hidden = !e.target.checked;
+  if (!e.target.checked && Object.values(state.walls).some(Boolean)) { // vuelve a una sola cerámica
+    state.walls = {};
+    renderTileSelects(); buildRoom(); updateWallVisibility(); persist(); renderSummary();
+  }
+});
+document.querySelectorAll(".wall-one").forEach((el) => el.addEventListener("change", () => {
+  const v = el.value;
+  if (v === "same") delete state.walls[el.dataset.side];
+  else { const [productId, variantId] = v.split("|"); state.walls[el.dataset.side] = productId ? { productId, variantId } : { productId: null }; }
+  buildRoom(); updateWallVisibility(); persist(); renderSummary();
+}));
 for (const [id, key] of [["floorTile", "floor"], ["wallTile", "wall"]]) $(id).addEventListener("change", (e) => {
   const [productId, variantId] = e.target.value.split("|");
   state[key] = productId ? { productId, variantId } : null;
@@ -1021,6 +1057,43 @@ $("prods").addEventListener("click", (e) => {
   if (b) addProduct(byId(b.dataset.add));
 });
 
+// productos puestos en el baño, cada uno con su selector de color o acabado
+function renderPlaced() {
+  $("placed").innerHTML = state.items.map((it) => {
+    const p = byId(it.productId);
+    if (!p) return "";
+    const v = variantOf(p, it.variantId);
+    const opts = p.variants.filter((x) => x.active);
+    return `<div class="prod" data-uid="${it.uid}" style="cursor:default">
+      <img class="sw" src="${esc(p.photos[0] || illustrate(p, v))}" alt="">
+      <span><span style="display:block">${esc(p.name)}</span>
+        ${opts.length > 1 ? `<select class="input" data-color style="margin-top:4px;padding:5px 8px;font-size:13px">${opts.map((x) =>
+          `<option value="${x.id}" ${x.id === v?.id ? "selected" : ""} ${x.stock <= 0 ? "disabled" : ""}>${esc(x.name)}${x.stock <= 0 ? " (agotado)" : ""} · ${money.format(x.finalPrice)}</option>`).join("")}</select>`
+          : `<span class="muted">${esc(v?.name || "")}</span>`}</span>
+      <button class="icon-btn" data-pick title="Ver en el baño" aria-label="Ver en el baño">◎</button>
+      <button class="icon-btn" data-del title="Quitar" aria-label="Quitar del baño">🗑</button></div>`;
+  }).join("") || `<span class="muted">Aún no hay productos en tu baño.</span>`;
+}
+$("placed").addEventListener("change", async (e) => {
+  if (!e.target.matches("[data-color]")) return;
+  const it = state.items.find((x) => x.uid === e.target.closest("[data-uid]").dataset.uid);
+  it.variantId = e.target.value;
+  persist(); renderSummary();
+  await rebuildItems();
+  if (selected?.userData.item.uid === it.uid) renderSelection();
+});
+$("placed").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-uid]");
+  if (!row) return;
+  const obj = itemsGroup.children.find((o) => o.userData.item.uid === row.dataset.uid);
+  if (e.target.closest("[data-del]")) {
+    state.items = state.items.filter((x) => x.uid !== row.dataset.uid);
+    if (obj) itemsGroup.remove(obj);
+    if (selected === obj) select(null);
+    persist(); renderSummary();
+  } else if (e.target.closest("[data-pick]") && obj) { select(obj); flash("Seleccionado: arrástralo o cambia su color abajo"); }
+});
+
 let lastRows = [], lastTotal = 0;
 function renderSummary() {
   const { w, l, h } = state.room;
@@ -1036,7 +1109,18 @@ function renderSummary() {
     rows.push([`${label}: ${p.name} · ${v?.name ?? ""} (${m2.toLocaleString(C.locale)} m²)`, sub]);
   };
   tileRow(state.floor, w * l, "Piso");
-  tileRow(state.wall, 2 * (w + l) * h - DOOR.w * DOOR.h, "Paredes");
+  const NAMES = { back: "fondo", front: "frente", left: "izquierda", right: "derecha" };
+  const byTile = new Map();          // misma cerámica en varias paredes = una sola línea
+  for (const side of ["back", "left", "right", "front"]) {
+    const sel = wallTileOf(side);
+    if (!sel) continue;
+    const area = (side === "back" || side === "front" ? w : l) * h - (side === state.room.doorWall ? DOOR.w * DOOR.h : 0);
+    const k = selKey(sel);
+    const g = byTile.get(k) || { sel, area: 0, sides: [] };
+    g.area += area; g.sides.push(NAMES[side]);
+    byTile.set(k, g);
+  }
+  for (const g of byTile.values()) tileRow(g.sel, g.area, g.sides.length === 4 ? "Paredes" : `Pared${g.sides.length > 1 ? "es" : ""} ${g.sides.join(", ")}`);
   const grouped = new Map();
   for (const it of state.items) {
     const key = `${it.productId}|${it.variantId}`;
@@ -1056,6 +1140,7 @@ function renderSummary() {
       `<div class="total"><span>Total</span><span>${money.format(total)}</span></div>`
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
   lastRows = rows; lastTotal = total;
+  renderPlaced();
   $("footTotal").innerHTML = total ? `Total <b style="color:var(--text-primary)">${money.format(total)}</b>` : "";
   $("expTotal").innerHTML = total ? `Total <b>${money.format(total)}</b>` : "";
   if (!savedCode) { $("codeArea").innerHTML = ""; $("waBtn").hidden = true; }
@@ -1156,6 +1241,8 @@ async function init() {
   state.items = state.items.filter((it) => byId(it.productId));
   if (state.floor && !byId(state.floor.productId)) state.floor = null;
   if (state.wall && !byId(state.wall.productId)) state.wall = null;
+  state.walls ||= {};
+  for (const [k, v] of Object.entries(state.walls)) if (v?.productId && !byId(v.productId)) delete state.walls[k];
   renderTileSelects();
   renderProducts();
   buildRoom();
@@ -1208,7 +1295,7 @@ $("saveBtn").onclick = async () => {
   const st = (m, k = "") => { $("saveStatus").textContent = m; $("saveStatus").className = `status ${k}`; };
   if (!state.items.length && !state.floor && !state.wall) return st("Agrega algo a tu baño antes de guardarlo.", "err");
   $("saveBtn").disabled = true; st("Guardando…");
-  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, items: state.items };
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items };
   const { data: code, error } = await db.rpc("save_design", {
     p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(), p_phone: $("cPhone").value.trim(), p_source: KIOSK ? "tienda" : "web",
   });
@@ -1240,7 +1327,7 @@ addEventListener("afterprint", () => { printImg?.remove(); printImg = null; });
 $("printBtn").onclick = () => { showStep(4); setTimeout(() => print(), 50); };
 
 async function loadDesign(data) {
-  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, items: data.items || [] });
+  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [] });
   state.items = state.items.filter((it) => byId(it.productId));
   select(null);
   renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();

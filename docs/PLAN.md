@@ -34,6 +34,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - Supabase (`kakkqkidixddqjzucrzv`): migraciones `setup` y `002`–`007` aplicadas; registro de usuarios cerrado.
   Catálogo demo de 135 productos (SKU `DEMO-…`, precios de referencia y stock de prueba).
 - Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV y fotos en lote), `disenar.html`
-  (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom) y `tienda.html` (kiosco).
+  (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom, cerámica distinta en
+  cada pared, lista "En tu baño" para cambiar el color de cada producto, blancos neutros) y `tienda.html` (kiosco).
 - Pendiente: `whatsapp` de la tienda en `config.js`; ver los diseños guardados en `admin.html`;
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

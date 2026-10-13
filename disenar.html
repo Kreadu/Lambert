@@ -745,8 +745,26 @@ async function buildItem(item) {
       obj.add(src);
     } catch { obj = proxy(p, color); }
   } else obj = proxy(p, color);
+  obj.add(planOutline(p));
   obj.userData.item = item;
   return obj;
+}
+
+// contorno del producto en la vista de planta: sin él, la loza blanca no se distingue de un piso blanco
+const PLAN_LINE = new THREE.MeshBasicMaterial({ color: "#3a3a3a", depthTest: false });
+function planOutline(p) {
+  const [w, h, d] = dimsOf(p);
+  const t = Math.min(0.012, w / 4, d / 4); // grosor de la línea (1,2 cm)
+  const shape = new THREE.Shape([[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([x, y]) => new THREE.Vector2(x, y)));
+  shape.holes.push(new THREE.Path([[-w / 2 + t, -d / 2 + t], [-w / 2 + t, d / 2 - t], [w / 2 - t, d / 2 - t], [w / 2 - t, -d / 2 + t]].map(([x, y]) => new THREE.Vector2(x, y))));
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), PLAN_LINE);
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = h + 0.01;
+  m.renderOrder = 10; // encima del producto (sin prueba de profundidad)
+  m.userData.planOnly = true;
+  m.visible = planMode;
+  m.raycast = () => {}; // no estorba al tocar o arrastrar
+  return m;
 }
 
 function placeObject(obj) {
@@ -1186,6 +1204,7 @@ function setView(plan) {
   $("view3d").classList.toggle("active", !plan);
   $("viewPlan").classList.toggle("active", plan);
   roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = plan; });
+  itemsGroup.traverse((o) => { if (o.userData.planOnly) o.visible = plan; });
   if (!plan) $("labels").innerHTML = "";
   updateWallVisibility();
 }

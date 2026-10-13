@@ -41,5 +41,6 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   "Hablar con un asesor" aparece solo cuando la tienda pone su WhatsApp en "Mi empresa".
 - Varias tiendas (`008` + función `crear-tienda`): cada empresa con sus datos, logo, país, moneda, catálogo y
   diseños. Teléfonos con código de país. "Nueva tienda" en admin.html para los administradores de la plataforma.
-- Pendiente: publicar `crear-tienda` (008 ya está aplicada); WhatsApp de la tienda en "Mi empresa";
+- 008 aplicada; la función está publicada como `swift-api`.
+- Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

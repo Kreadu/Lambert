@@ -988,7 +988,7 @@ $("newStoreForm").addEventListener("submit", async (e) => {
   const body = { name: $("n-name").value.trim(), slug: $("n-slug").value.trim(), email: $("n-email").value.trim(), password: $("n-pass").value,
     country, currency: $("n-currency").value, cc: countryOf(country).dial };
   $("newStoreSave").disabled = true; status("newStoreStatus", "Creando…");
-  const { data, error } = await db.functions.invoke("crear-tienda", { body });
+  const { data, error } = await db.functions.invoke(C.createStoreFunction || "crear-tienda", { body });
   $("newStoreSave").disabled = false;
   if (error) {
     let code = "";

@@ -8,4 +8,5 @@ window.LAMBERT = {
   store: "lambert",         // tienda que se muestra si la dirección no dice otra (?t=otra-tienda)
   storeName: "Lambert",     // nombre mientras carga
   bucket: "catalogo",
+  createStoreFunction: "swift-api",  // nombre de la Edge Function con el código de supabase/functions/crear-tienda
 };

@@ -23,7 +23,7 @@ y sus diseños, y no ve los de las demás. Las páginas muestran la tienda de la
 o la de `store` en `config.js`.
 
 1. **SQL Editor** → pega `supabase/008-multiempresa.sql` → **Run**. Lo que ya existía queda en la tienda `lambert`.
-2. **Edge Functions → Deploy a new function → Via Editor**, nombre `crear-tienda`: pega
+2. **Edge Functions → Deploy a new function → Via Editor**, nombre `crear-tienda` (si Supabase le pone otro, como `swift-api`, escríbelo en `createStoreFunction` de `config.js`): pega
    `supabase/functions/crear-tienda/index.ts`, desactiva *Verify JWT* y **Deploy**.
 3. En `admin.html`, quien esté en la tabla `admins` (Kreadu) ve la pestaña **Tiendas** → **+ Nueva tienda**: nombre,
    país, correo y contraseña del dueño. El dueño entra a `admin.html` con ese correo y solo ve su tienda.

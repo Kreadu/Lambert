@@ -1341,7 +1341,7 @@ $("saveBtn").onclick = async () => {
     <div id="qr"></div><div class="muted">Escanéalo para seguir en tu celular, o dale el código al asesor.</div></div>`;
   if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
   $("waMe").hidden = false;
-  $("waStore").hidden = !C.whatsapp; // aparece solo cuando la tienda tenga su WhatsApp en "Datos de la empresa"
+  $("waStore").hidden = !C.whatsapp; // aparece solo cuando la tienda tenga su WhatsApp en "Mi empresa"
 };
 // código de país + número, solo dígitos (vacío = WhatsApp deja elegir a quién enviar)
 const waNumber = () => { const v = phoneValue("cPhone"); return v ? v.dial + v.number : ""; };

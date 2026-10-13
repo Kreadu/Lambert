@@ -27,12 +27,12 @@ o la de `store` en `config.js`.
    `supabase/functions/crear-tienda/index.ts`, desactiva *Verify JWT* y **Deploy**.
 3. En `admin.html`, quien esté en la tabla `admins` (Kreadu) ve la pestaña **Tiendas** → **+ Nueva tienda**: nombre,
    país, correo y contraseña del dueño. El dueño entra a `admin.html` con ese correo y solo ve su tienda.
-4. Cada tienda llena **Datos de la empresa**: logo, razón social, país, moneda, WhatsApp y teléfono con código de país.
+4. Cada tienda llena **Mi empresa**: logo, razón social, país, moneda, WhatsApp y teléfono con código de país.
 
 ## En la tienda
 
 Abre `tienda.html` en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.
-Para que aparezca "Hablar con un asesor", pon el WhatsApp en admin.html → **Datos de la empresa**.
+Para que aparezca "Hablar con un asesor", pon el WhatsApp en admin.html → **Mi empresa**.
 
 ## Fotos 3D
 

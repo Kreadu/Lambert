@@ -14,6 +14,7 @@
   <span class="brand" id="brand">Administrar catálogo</span>
   <select class="input" id="storeSel" aria-label="Tienda" hidden style="width:auto;max-width:200px"></select>
   <a class="muted" id="viewCatalog" href="catalogo.html" target="_blank" style="margin-left:auto">Ver catálogo ↗</a>
+  <button class="btn" id="myCompany" type="button" hidden>🏢 Mi empresa</button>
   <button class="btn" id="logout" hidden>Salir</button>
 </div></header>
 
@@ -34,7 +35,7 @@
   <nav class="filters" id="tabs" hidden>
     <button class="chip active" type="button" data-tab="productos">Productos</button>
     <button class="chip" type="button" data-tab="disenos">Diseños guardados</button>
-    <button class="chip" type="button" data-tab="empresa">Datos de la empresa</button>
+    <button class="chip" type="button" data-tab="empresa">🏢 Mi empresa</button>
     <button class="chip" type="button" data-tab="tiendas" hidden>Tiendas</button>
   </nav>
 
@@ -95,8 +96,8 @@
 
   <!-- Datos de la empresa -->
   <section id="companyPanel" class="panel" hidden>
-    <h2>Datos de la empresa</h2>
-    <p class="muted" style="margin:-4px 0 12px">Aparecen en el catálogo, en la pantalla de la tienda y en el diseñador.</p>
+    <h2>Mi empresa</h2>
+    <p class="muted" style="margin:-4px 0 12px">Tus datos, logo, moneda y contacto. Aparecen en el catálogo, en la pantalla de la tienda y en el diseñador.</p>
     <div class="field"><label>Logo</label>
       <div class="row" style="flex-wrap:wrap;gap:12px">
         <div id="logoPreview" class="logo-preview"></div>
@@ -305,9 +306,11 @@ function show(section) {
   const main = section === "listPanel";
   ["login", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
   $("tabs").hidden = !main;
+  $("myCompany").hidden = !S.store || section === "login";
   for (const [k, ids] of Object.entries(TABS)) ids.forEach((id) => { $(id).hidden = !main || k !== tab; });
   document.querySelectorAll("#tabs [data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
 }
+$("myCompany").addEventListener("click", () => { tab = "empresa"; show("listPanel"); });
 $("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tab]");
   if (!b) return;

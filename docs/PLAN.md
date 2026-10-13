@@ -38,8 +38,8 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   cada pared, lista "En tu baño" para cambiar el color de cada producto, blancos neutros) y `tienda.html` (kiosco).
 - Pie de Kreadu (desarrollador) en todas las páginas: `kreadu.js`, mismos datos que Miel.
 - WhatsApp: "Enviármelo por WhatsApp" manda al cliente su diseño y presupuesto (en la tienda, con un QR).
-  "Hablar con un asesor" aparece solo cuando la tienda pone su WhatsApp en "Datos de la empresa".
+  "Hablar con un asesor" aparece solo cuando la tienda pone su WhatsApp en "Mi empresa".
 - Varias tiendas (`008` + función `crear-tienda`): cada empresa con sus datos, logo, país, moneda, catálogo y
   diseños. Teléfonos con código de país. "Nueva tienda" en admin.html para los administradores de la plataforma.
-- Pendiente: correr `008` y publicar `crear-tienda`; WhatsApp de la tienda en "Datos de la empresa";
+- Pendiente: publicar `crear-tienda` (008 ya está aplicada); WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

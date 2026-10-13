@@ -73,6 +73,18 @@
     </details>
   </section>
 
+  <!-- Diseños guardados desde el diseñador (006) -->
+  <section id="designsPanel" class="panel" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:8px;flex-wrap:wrap">
+      <h2 style="margin:0">Diseños guardados</h2>
+      <button class="btn" type="button" id="dRefresh">↻ Actualizar</button>
+    </div>
+    <div class="search-box"><input id="dSearch" type="search" placeholder="Buscar por código, nombre o celular" aria-label="Buscar diseños"></div>
+    <div class="status" id="dStatus"></div>
+    <div id="designs"></div>
+    <button class="btn" type="button" id="dMore" hidden style="margin-top:8px">Ver más</button>
+  </section>
+
   <!-- Editor -->
   <section id="editor" hidden>
     <div class="panel">
@@ -209,7 +221,7 @@ fillCategorySelect();
 
 function show(section) {
   ["login", "listPanel", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
-  $("bulkPanel").hidden = section !== "listPanel";
+  $("bulkPanel").hidden = $("designsPanel").hidden = section !== "listPanel";
 }
 function status(id, msg, kind = "") { const el = $(id); el.textContent = msg; el.className = `status ${kind}`; }
 function notice(html) { $("notice").innerHTML = html; show("notice"); }
@@ -226,6 +238,7 @@ async function start() {
   if (error) return notice("No se pudo verificar tu acceso. ¿Corriste <code>supabase/setup.sql</code>?");
   if (!admin) return notice(`<b>${esc(session.user.email)}</b> no es administrador. Agrégalo en la tabla <code>admins</code> desde el SQL Editor de Supabase.`);
   await refreshList();
+  loadDesigns();
 }
 
 $("loginForm").addEventListener("submit", async (e) => {
@@ -645,6 +658,79 @@ $("u-model").addEventListener("change", async (e) => {
   await removeMedia(current.media.filter((m) => m.kind === "model"));
   await upload("model", [f], "s-model");
 });
+
+// ── Diseños guardados (código BA-XXXX) ──
+const PAGE = 30;
+let designs = [], designsDone = false, dQuery = "";
+async function loadDesigns(more = false) {
+  if (!more) { designs = []; designsDone = false; }
+  status("dStatus", "Cargando…");
+  let q = db.from("designs").select("id, code, data, total, customer_name, customer_phone, source, created_at")
+    .order("created_at", { ascending: false }).range(designs.length, designs.length + PAGE - 1);
+  if (dQuery) {
+    const t = dQuery.replace(/[%*,()]/g, " ").trim();
+    q = q.or(`code.ilike.*${t}*,customer_name.ilike.*${t}*,customer_phone.ilike.*${t}*`);
+  }
+  const { data, error } = await q;
+  if (error) {
+    console.error(error);
+    return status("dStatus", /designs/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudieron cargar los diseños.", "err");
+  }
+  status("dStatus", "");
+  designs.push(...data);
+  designsDone = data.length < PAGE;
+  renderDesigns();
+}
+function renderDesigns() {
+  const when = new Intl.DateTimeFormat(C.locale, { dateStyle: "medium", timeStyle: "short" });
+  const m = (v) => (Number(v) || 0).toLocaleString(C.locale, { maximumFractionDigits: 2 });
+  $("designs").innerHTML = designs.length ? designs.map((d) => {
+    const room = d.data?.room || {};
+    const items = d.data?.items || [];
+    const names = [...new Set(items.map((it) => products.find((p) => p.id === it.productId)?.name).filter(Boolean))];
+    const phone = d.customer_phone.replace(/\D/g, "");
+    const who = [d.customer_name, d.customer_phone].filter(Boolean).join(" · ") || "Sin nombre";
+    const extras = [
+      when.format(new Date(d.created_at)),
+      d.source === "tienda" ? "en la tienda" : "web",
+      room.w && room.l && `${m(room.w)} × ${m(room.l)} m`,
+      `${items.length} producto(s)`,
+    ].filter(Boolean).join(" · ");
+    return `<div class="list-item" style="cursor:default;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="row" style="gap:8px;flex-wrap:wrap"><b style="letter-spacing:.06em">${esc(d.code)}</b>
+          <span style="font-weight:600;font-variant-numeric:tabular-nums">${money.format(d.total)}</span></div>
+        <div style="font-size:14px">${esc(who)}</div>
+        <div class="muted">${esc(extras)}</div>
+        ${names.length ? `<div class="muted" style="margin-top:2px">${esc(names.join(", "))}</div>` : ""}
+      </div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        <a class="btn" href="disenar.html?d=${encodeURIComponent(d.code)}" target="_blank" rel="noopener">Abrir ↗</a>
+        ${phone ? `<a class="btn" href="https://wa.me/${phone}?text=${encodeURIComponent(`Hola${d.customer_name ? " " + d.customer_name : ""}, te escribimos de ${C.storeName} por tu diseño de baño ${d.code}.`)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+        <button class="btn btn-danger" type="button" data-del="${d.id}" title="Eliminar diseño" aria-label="Eliminar diseño ${esc(d.code)}">🗑</button>
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty"><strong>${dQuery ? "Nada coincide" : "Aún no hay diseños guardados"}</strong>${dQuery ? "Prueba con otro código, nombre o celular." : "Aparecen aquí cuando un cliente guarda su baño en el diseñador."}</div>`;
+  $("dMore").hidden = designsDone;
+}
+$("designs").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-del]");
+  if (!b) return;
+  const d = designs.find((x) => x.id === b.dataset.del);
+  if (!d || !confirm(`¿Eliminar el diseño ${d.code}? El cliente ya no podrá abrirlo con su código.`)) return;
+  b.disabled = true;
+  const { error } = await db.from("designs").delete().eq("id", d.id);
+  if (error) { console.error(error); b.disabled = false; return status("dStatus", "No se pudo eliminar.", "err"); }
+  designs = designs.filter((x) => x !== d);
+  renderDesigns();
+});
+let dTimer;
+$("dSearch").addEventListener("input", (e) => {
+  clearTimeout(dTimer);
+  dTimer = setTimeout(() => { dQuery = e.target.value.trim(); loadDesigns(); }, 300);
+});
+$("dRefresh").addEventListener("click", () => loadDesigns());
+$("dMore").addEventListener("click", () => loadDesigns(true));
 
 LambertImport.init({ db, C, products: () => products, refresh: refreshList });
 start();

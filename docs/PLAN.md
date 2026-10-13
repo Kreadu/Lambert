@@ -23,7 +23,7 @@ Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de 
    - Tocar un producto para cambiar su color o acabado entre las variantes con stock.
    - Si un producto no tiene modelo 3D, se muestra una caja con sus medidas y su color.
 3. **Cotización** (hecha): total con cerámica en m², código BA-XXXX con QR, WhatsApp e impresión (`006`).
-   Pendiente: ver los diseños guardados en `admin.html`.
+   En `admin.html` se ven los diseños guardados (buscar, abrir, escribir al cliente por WhatsApp, eliminar).
 4. **Después**: baños en L, ventanas, varias paredes de ducha (vidrio), vista en realidad aumentada y
    conexión del stock con Miel.
 
@@ -33,8 +33,8 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 ## Dónde quedamos (2026-10-13)
 - Supabase (`kakkqkidixddqjzucrzv`): migraciones `setup` y `002`–`007` aplicadas; registro de usuarios cerrado.
   Catálogo demo de 135 productos (SKU `DEMO-…`, precios de referencia y stock de prueba).
-- Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV y fotos en lote), `disenar.html`
+- Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV, fotos en lote y diseños guardados), `disenar.html`
   (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom, cerámica distinta en
   cada pared, lista "En tu baño" para cambiar el color de cada producto, blancos neutros) y `tienda.html` (kiosco).
-- Pendiente: `whatsapp` de la tienda en `config.js`; ver los diseños guardados en `admin.html`;
+- Pendiente: `whatsapp` de la tienda en `config.js`;
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

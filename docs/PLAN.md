@@ -49,6 +49,10 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - `index.html` es la página de inicio de Lambert (se quitó la plantilla de ropa); `tienda.html` la abre en modo kiosco.
 - Seguimiento de diseños, límite de guardado, tiendas activas/inactivas y recuperar contraseña (`011`).
   Excel con código de barras, m² por caja y rendimiento. Pruebas automáticas: `npm test` (16 pruebas).
-- Pendiente: correr `011`; agregar la dirección publicada de admin.html en Redirect URLs de Supabase.
+- `011` aplicada (2026-10-14). Pendiente: dirección publicada de admin.html en Redirect URLs de Supabase.
+- Fotos de prueba (Wikimedia Commons, licencias libres) listas en `~/Escritorio/Lambert-fotos-prueba`
+  (fuera del repo): 11 fotos nombradas por SKU para "Subir fotos en lote" y 2 texturas (mármol Carrara,
+  baldosa Floral azul) para subir en cada color; LEEME.txt y CREDITOS.txt. Falta que el usuario las suba.
+  Vista previa del catálogo con fotos: se ve bien. Falta revisar el diseñador 3D con las texturas reales.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

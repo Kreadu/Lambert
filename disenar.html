@@ -94,6 +94,10 @@
   .dimlabel{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-weight:600;pointer-events:none;font-variant-numeric:tabular-nums;z-index:2}
   .summary-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)}
   .summary-row span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sum-sec{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-tertiary);margin:12px 0 2px}
+  .sum-sec:first-child{margin-top:0}
+  .summary-row .muted{font-size:12px}
+  #quote{display:none}
   .total{display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding-top:8px}
   .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary)}
   .code-box{text-align:center;padding:14px;border:1px dashed var(--text-tertiary);border-radius:var(--radius-lg);margin:10px 0}
@@ -107,13 +111,43 @@
   .idle{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
   .idle .panel{max-width:360px;text-align:center}
   /* impresión: solo el resumen */
+  @page{size:A4;margin:12mm}
   @media print{
-    .topbar,.steps,.side-foot,.viewbar,.hud,.hint,.pane:not(#pane4),#saveArea button,.no-print{display:none!important}
-    body,html{overflow:visible;height:auto}
-    .app{display:block}.side{width:100%;border:none;height:auto}.side-body{overflow:visible}
-    .stage{height:420px;break-inside:avoid}
-    #pane4{display:block!important}
+    body > *:not(#quote){display:none!important}
+    body,html{overflow:visible;height:auto;background:#fff}
+    #quote{display:block!important;color:#111;font-size:11px;line-height:1.4}
   }
+  .q-head{display:flex;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #111}
+  .q-store{display:flex;gap:12px;align-items:flex-start;color:#444}
+  .q-logo{max-height:64px;max-width:150px;object-fit:contain}
+  .q-name{font-size:18px;font-weight:600;color:#111}
+  .q-meta{text-align:right;color:#444;white-space:nowrap}
+  .q-title{font-size:20px;font-weight:600;color:#111;text-transform:uppercase;letter-spacing:.06em}
+  .q-code{font-size:16px;font-weight:600;color:#111;letter-spacing:.08em;margin-bottom:4px}
+  .q-info{display:flex;gap:24px;padding:8px 0;border-bottom:1px solid #ddd}
+  .q-info span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#777}
+  .q-views{display:grid;grid-template-columns:3fr 2fr;gap:8px;margin:10px 0;break-inside:avoid}
+  .q-views figure{margin:0;border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f5f5f5}
+  .q-views img{display:block;width:100%;height:210px;object-fit:contain}
+  .q-views figcaption{font-size:9px;color:#777;padding:3px 6px;background:#fff;border-top:1px solid #eee}
+  .q-table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .q-table.q-keep{break-inside:avoid}
+  .q-table th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#777;border-bottom:1px solid #111;padding:4px}
+  .q-table td{padding:5px 4px;border-bottom:1px solid #e5e5e5;vertical-align:middle}
+  .q-table .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .q-table tr{break-inside:avoid}
+
+  .q-sec td{font-weight:600;background:#f3f3f3;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  .q-prod{display:flex;gap:8px;align-items:center}
+  .q-prod img{width:30px;height:30px;object-fit:cover;border-radius:4px;border:1px solid #ddd;flex-shrink:0}
+  .q-det{font-size:9.5px;color:#777}
+  .q-total{display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-top:2px solid #111;padding:8px 4px 0;break-inside:avoid}
+  .q-foot{display:flex;justify-content:space-between;gap:16px;margin-top:12px;break-inside:avoid}
+  .q-notes{color:#555;font-size:10px}
+  .q-notes p{margin:0 0 4px}
+  .q-qr{text-align:center;font-size:9px;color:#555;flex-shrink:0}
+  .q-qr img{width:90px;height:90px;display:block;margin:0 auto 2px}
+  .q-credit{margin-top:14px;font-size:8.5px;color:#999;text-align:center}
 </style>
 <script type="importmap">
 { "imports": {
@@ -192,8 +226,9 @@
 
       <section class="pane" id="pane4">
         <h3>Tu selección</h3>
+        <label class="row" id="suppliesRow" style="font-size:14px;margin-bottom:8px" hidden><input type="checkbox" id="suppliesChk" checked> Incluir pegante y boquilla</label>
         <div id="summary"></div>
-        <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio. Precios sujetos a cambio.</p>
+        <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Pegante y boquilla son cantidades aproximadas. Precios sujetos a cambio.</p>
         <div id="saveArea" style="margin-top:14px">
           <div class="field"><label for="cName">Tu nombre <span class="muted">(opcional)</span></label><input class="input" id="cName" maxlength="80" autocomplete="name"></div>
           <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para enviarte el diseño por WhatsApp)</span></label><div id="cPhoneSlot"></div></div>
@@ -261,7 +296,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const { C, db, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
+const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
 $("cPhoneSlot").outerHTML = phoneField("cPhone", "CO", "", 'maxlength="20"');
 
@@ -334,6 +369,7 @@ const emptyState = () => ({
   floor: null, wall: null,         // { productId, variantId }
   walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
+  supplies: true,                  // incluir pegante y boquilla en la cotización
 });
 const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem(`lambert_diseno_${storeSlug()}`) || "null"); } catch { return null; } })();
 const state = saved?.room ? saved : emptyState();
@@ -1184,20 +1220,47 @@ $("placed").addEventListener("click", (e) => {
 });
 
 let lastRows = [], lastTotal = 0;
-function renderSummary() {
+// ── Cotización: cerámica en cajas completas, productos, y pegante y boquilla calculados ──
+const nf = (n, d = 2) => n.toLocaleString(C.locale, { maximumFractionDigits: d });
+const plural = (u, n) => (n === 1 || /²|kg$/.test(u) ? u : /[aeiou]$/.test(u) ? `${u}s` : `${u}es`);
+const isPorcelain = (p) => /porcelanato/i.test(`${p.subcategory} ${p.name}`) || Math.max(p.tile_width_cm || 0, p.tile_height_cm || 0) > 60;
+const supplyOf = (role) => products.find((p) => p.supply_role === role && p.available && p.coverage_m2 > 0);
+// la boquilla del color más parecido al de la cerámica
+function nearestVariant(p, hex) {
+  const vs = p.inStock.length ? p.inStock : p.variants;
+  const rgb = (h) => (/^#[0-9a-f]{6}$/i.test(h || "") ? [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16)) : null);
+  const t = rgb(hex);
+  if (!t) return vs[0];
+  const d = (v) => { const c = rgb(v.color_hex); return c ? c.reduce((n, x, k) => n + (x - t[k]) ** 2, 0) : Infinity; };
+  return vs.reduce((a, b) => (d(b) < d(a) ? b : a), vs[0]);
+}
+let quote = { sections: [], total: 0, hasSupplies: false };
+function buildQuote() {
   const { w, l, h } = state.room;
-  const rows = [];
-  let total = 0;
-  const tileRow = (sel, area, label) => {
+  const tiles = [], items = [], supplies = [];
+  const adhesive = new Map(), grout = new Map();
+  const tileLine = (sel, area, label) => {
     const p = sel && byId(sel.productId);
-    if (!p) return;
+    if (!p || area <= 0) return;
     const v = variantOf(p, sel.variantId);
-    const m2 = Math.ceil(area * 1.1 * 100) / 100;
-    const sub = m2 * (v?.finalPrice ?? p.price);
-    total += sub;
-    rows.push([`${label}: ${p.name} · ${v?.name ?? ""} (${m2.toLocaleString(C.locale)} m²)`, sub]);
+    const price = v?.finalPrice ?? p.price;
+    const need = area * 1.1;
+    const base = { name: `${p.name}${v ? " · " + v.name : ""}`, img: tileImg(p, v) };
+    if (p.m2_per_box > 0) {
+      const boxes = Math.ceil(need / p.m2_per_box - 1e-9);
+      tiles.push({ ...base, qty: boxes, unit: plural("caja", boxes), unitPrice: price * p.m2_per_box, sub: boxes * p.m2_per_box * price,
+        detail: `${label}: ${nf(area)} m² + 10 % → ${nf(boxes * p.m2_per_box)} m² (caja de ${nf(p.m2_per_box)} m²)` });
+    } else {
+      const m2 = Math.ceil(need * 100) / 100;
+      tiles.push({ ...base, qty: m2, unit: "m²", unitPrice: price, sub: m2 * price, detail: `${label}: ${nf(area)} m² + 10 %` });
+    }
+    // pegante (el de porcelanato si es porcelanato o gran formato) y boquilla del color de la cerámica
+    const ad = (isPorcelain(p) && supplyOf("adhesive_porcelain")) || supplyOf("adhesive");
+    if (ad) { const g = adhesive.get(ad.id) || { p: ad, v: ad.inStock[0] || ad.variants[0], m2: 0 }; g.m2 += area; adhesive.set(ad.id, g); }
+    const gr = supplyOf("grout");
+    if (gr) { const gv = nearestVariant(gr, v?.color_hex); const g = grout.get(gv?.id) || { p: gr, v: gv, m2: 0 }; g.m2 += area; grout.set(gv?.id, g); }
   };
-  tileRow(state.floor, w * l, "Piso");
+  tileLine(state.floor, w * l, "Piso");
   const NAMES = { back: "fondo", front: "frente", left: "izquierda", right: "derecha" };
   const byTile = new Map();          // misma cerámica en varias paredes = una sola línea
   for (const side of ["back", "left", "right", "front"]) {
@@ -1209,7 +1272,13 @@ function renderSummary() {
     g.area += area; g.sides.push(NAMES[side]);
     byTile.set(k, g);
   }
-  for (const g of byTile.values()) tileRow(g.sel, g.area, g.sides.length === 4 ? "Paredes" : `Pared${g.sides.length > 1 ? "es" : ""} ${g.sides.join(", ")}`);
+  for (const g of byTile.values()) tileLine(g.sel, g.area, g.sides.length === 4 ? "Paredes" : `Pared${g.sides.length > 1 ? "es" : ""} ${g.sides.join(", ")}`);
+  for (const g of [...adhesive.values(), ...grout.values()]) {
+    const qty = Math.ceil(g.m2 / g.p.coverage_m2 - 1e-9);
+    const price = g.v?.finalPrice ?? g.p.price;
+    supplies.push({ name: `${g.p.name}${g.v ? " · " + g.v.name : ""}`, img: g.p.photos[0] || illustrate(g.p, g.v), qty, unit: plural(unitLabel(g.p.unit), qty),
+      unitPrice: price, sub: qty * price, detail: `Para ${nf(g.m2)} m² · rinde ≈ ${nf(g.p.coverage_m2)} m² por ${unitLabel(g.p.unit)}` });
+  }
   const grouped = new Map();
   for (const it of state.items) {
     const key = `${it.productId}|${it.variantId}`;
@@ -1220,15 +1289,27 @@ function renderSummary() {
     const p = byId(pid);
     if (!p) continue;
     const v = variantOf(p, vid);
-    const sub = qty * (v?.finalPrice ?? p.price);
-    total += sub;
-    rows.push([`${qty > 1 ? qty + " × " : ""}${p.name}${v ? " · " + v.name : ""}`, sub]);
+    const price = v?.finalPrice ?? p.price;
+    items.push({ name: `${p.name}${v ? " · " + v.name : ""}`, img: p.photos[0] || illustrate(p, v), qty, unit: plural(unitLabel(p.unit), qty),
+      unitPrice: price, sub: qty * price, detail: categoryLabel(p.category) });
   }
-  $("summary").innerHTML = rows.length
-    ? rows.map(([t, s]) => `<div class="summary-row"><span>${esc(t)}</span><span>${money.format(s)}</span></div>`).join("") +
+  const withSupplies = state.supplies !== false;
+  const sections = [["Cerámica", tiles], ["Productos", items], ["Pegante y boquilla", withSupplies ? supplies : []]].filter(([, ls]) => ls.length);
+  return { sections, total: sections.flatMap(([, ls]) => ls).reduce((n, x) => n + x.sub, 0), hasSupplies: supplies.length > 0 };
+}
+const qtyText = (x) => `${nf(x.qty)} ${x.unit}`;
+function renderSummary() {
+  quote = buildQuote();
+  const { sections, total } = quote;
+  $("summary").innerHTML = sections.length
+    ? sections.map(([title, ls]) => `<div class="sum-sec">${esc(title)}</div>` + ls.map((x) => `<div class="summary-row">
+        <span><b>${esc(qtyText(x))}</b> · ${esc(x.name)}<br><span class="muted">${esc(x.detail)}</span></span><span>${money.format(x.sub)}</span></div>`).join("")).join("") +
       `<div class="total"><span>Total</span><span>${money.format(total)}</span></div>`
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
-  lastRows = rows; lastTotal = total;
+  $("suppliesRow").hidden = !quote.hasSupplies;
+  $("suppliesChk").checked = state.supplies !== false;
+  lastRows = sections.flatMap(([, ls]) => ls.map((x) => [`${qtyText(x)} · ${x.name}`, x.sub]));
+  lastTotal = total;
   renderPlaced();
   $("footTotal").innerHTML = total ? `Total <b style="color:var(--text-primary)">${money.format(total)}</b>` : "";
   $("expTotal").innerHTML = total ? `Total <b>${money.format(total)}</b>` : "";
@@ -1396,18 +1477,20 @@ showStep(1);
 
 // ── Guardar con código, abrir por código, WhatsApp, imprimir ──
 const designUrl = (code) => `${location.origin}${location.pathname}?d=${code}`;
-$("saveBtn").onclick = async () => {
+$("saveBtn").onclick = () => saveDesign();
+/** Guarda el diseño y devuelve su código (o null si no se pudo). */
+async function saveDesign() {
   const st = (m, k = "") => { $("saveStatus").textContent = m; $("saveStatus").className = `status ${k}`; };
-  if (!state.items.length && !state.floor && !state.wall) return st("Agrega algo a tu baño antes de guardarlo.", "err");
+  if (!state.items.length && !state.floor && !state.wall) { st("Agrega algo a tu baño antes de guardarlo.", "err"); return null; }
   $("saveBtn").disabled = true; st("Guardando…");
   const phone = phoneValue("cPhone");
-  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items };
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false };
   const { data: code, error } = await db.rpc("save_design", {
     p_store: C.storeId, p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(),
     p_phone: phone ? `+${phone.dial} ${phone.number}` : "", p_source: KIOSK ? "tienda" : "web",
   });
   $("saveBtn").disabled = false;
-  if (error) { console.error(error); return st(/save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); }
+  if (error) { console.error(error); st(/save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); return null; }
   st("");
   savedCode = code;
   $("codeArea").innerHTML = `<div class="code-box"><div class="muted">Tu código</div><div class="code">${esc(code)}</div>
@@ -1415,7 +1498,8 @@ $("saveBtn").onclick = async () => {
   if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
   $("waMe").hidden = false;
   $("waStore").hidden = !C.whatsapp; // aparece solo cuando la tienda tenga su WhatsApp en "Mi empresa"
-};
+  return code;
+}
 // código de país + número, solo dígitos (vacío = WhatsApp deja elegir a quién enviar)
 const waNumber = () => { const v = phoneValue("cPhone"); return v ? v.dial + v.number : ""; };
 const waUrl = (num, text) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
@@ -1439,20 +1523,84 @@ $("waStore").onclick = () => {
   const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
   window.open(waUrl(C.whatsapp, text), "_blank", "noopener");
 };
-// para imprimir, el lienzo 3D se convierte en imagen (los navegadores no imprimen WebGL)
-let printImg = null;
-addEventListener("beforeprint", () => {
+// ── Cotización impresa: documento con los datos de la tienda (los navegadores no imprimen WebGL: van imágenes) ──
+let lastViews = null;
+function captureViews() {
+  // si el 3D no se ve (la página ya está en modo impresión), se usa la última captura buena
+  if (renderer.domElement.width < 50 || renderer.domElement.height < 50) return lastViews || ["", ""];
+  const wasPlan = planMode;
+  const shot = (plan) => { setView(plan); if (!plan) { controls.update(); updateWallVisibility(); } renderer.render(scene, camera); return renderer.domElement.toDataURL("image/jpeg", 0.9); };
+  const views = [shot(false), shot(true)];
+  setView(wasPlan);
   renderer.render(scene, camera);
-  printImg = new Image();
-  printImg.src = renderer.domElement.toDataURL("image/png");
-  printImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:4";
-  stage.appendChild(printImg);
-});
-addEventListener("afterprint", () => { printImg?.remove(); printImg = null; });
-$("printBtn").onclick = () => { showStep(4); setTimeout(() => print(), 50); };
+  if (views.every((v) => v.length > 2000)) lastViews = views;
+  return lastViews || views;
+}
+function qrDataUrl(text) {
+  if (!window.QRCode) return null;
+  const tmp = document.createElement("div");
+  new QRCode(tmp, { text, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+  return tmp.querySelector("canvas")?.toDataURL() || null;
+}
+function renderQuoteDoc() {
+  const s = S.store || {};
+  const [img3d, imgPlan] = captureViews();
+  const today = new Date();
+  const until = new Date(today.getTime() + (s.quote_validity_days || 15) * 86400000);
+  const date = (d) => d.toLocaleDateString(C.locale, { day: "numeric", month: "long", year: "numeric" });
+  const tel = (cc, n) => (n ? `+${cc} ${n}` : "");
+  const contact = [
+    s.legal_name && s.legal_name !== s.name ? s.legal_name : "",
+    s.tax_id ? `NIT / ID: ${s.tax_id}` : "",
+    [s.address, s.city, s.country && countryOf(s.country).name].filter(Boolean).join(", "),
+    [tel(s.phone_cc, s.phone) && `Tel. ${tel(s.phone_cc, s.phone)}`, tel(s.whatsapp_cc, s.whatsapp) && `WhatsApp ${tel(s.whatsapp_cc, s.whatsapp)}`].filter(Boolean).join(" · "),
+    [s.email, s.website].filter(Boolean).join(" · "),
+  ].filter(Boolean);
+  const phone = phoneValue("cPhone");
+  const client = [$("cName").value.trim(), phone ? `+${phone.dial} ${phone.number}` : ""].filter(Boolean).join(" · ");
+  const { w, l, h } = state.room;
+  const qr = savedCode ? qrDataUrl(designUrl(savedCode)) : null;
+  $("quote").innerHTML = `
+    <header class="q-head">
+      <div class="q-store">${C.logo ? `<img class="q-logo" src="${esc(C.logo)}" alt="">` : ""}
+        <div><div class="q-name">${esc(C.storeName)}</div>${contact.map((c) => `<div>${esc(c)}</div>`).join("")}</div></div>
+      <div class="q-meta"><div class="q-title">Cotización</div>
+        ${savedCode ? `<div class="q-code">${esc(savedCode)}</div>` : ""}
+        <div>Fecha: ${esc(date(today))}</div><div>Válida hasta: ${esc(date(until))}</div></div>
+    </header>
+    <div class="q-info">
+      ${client ? `<div><span>Cliente</span>${esc(client)}</div>` : ""}
+      <div><span>Baño</span>${esc(fmtM(w))} × ${esc(fmtM(l))} · alto ${esc(fmtM(h))}</div>
+    </div>
+    ${img3d ? `<div class="q-views"><figure><img src="${img3d}" alt=""><figcaption>Vista 3D</figcaption></figure><figure><img src="${imgPlan}" alt=""><figcaption>Planta</figcaption></figure></div>` : ""}
+    ${quote.sections.map(([title, ls], k) => `<table class="q-table ${ls.length <= 8 ? "q-keep" : ""}">
+      <colgroup><col><col style="width:15%"><col style="width:17%"><col style="width:15%"></colgroup>
+      ${k === 0 ? `<thead><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio unitario</th><th class="n">Subtotal</th></tr></thead>` : ""}
+      <tbody><tr class="q-sec"><td colspan="4">${esc(title)}</td></tr>` + ls.map((x) => `<tr>
+        <td><div class="q-prod"><img src="${esc(x.img)}" alt=""><div>${esc(x.name)}<div class="q-det">${esc(x.detail)}</div></div></div></td>
+        <td class="n">${esc(qtyText(x))}</td><td class="n">${money.format(x.unitPrice)}</td><td class="n">${money.format(x.sub)}</td></tr>`).join("") + `</tbody></table>`).join("")}
+    <div class="q-total"><span>Total</span><span>${money.format(quote.total)}</span></div>
+    <div class="q-foot">
+      <div class="q-notes">
+        <p>La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Las cantidades de pegante y boquilla son aproximadas.</p>
+        <p>Precios en ${esc(C.currency)}, sujetos a disponibilidad de inventario.</p>
+        ${s.quote_notes ? `<p>${esc(s.quote_notes).replace(/\n/g, "<br>")}</p>` : ""}
+      </div>
+      ${qr ? `<div class="q-qr"><img src="${qr}" alt=""><div>Abre este diseño<br><b>${esc(savedCode)}</b></div></div>` : ""}
+    </div>
+    <div class="q-credit">Cotización hecha con Lambert · KREADU S.A.S.</div>`;
+}
+addEventListener("beforeprint", renderQuoteDoc);
+$("printBtn").onclick = async () => {
+  showStep(4);
+  // con código: así la cotización lleva su QR y la tienda la encuentra después
+  if (!savedCode && !(await saveDesign())) return;
+  setTimeout(() => print(), 50);
+};
+$("suppliesChk").addEventListener("change", (e) => { state.supplies = e.target.checked; persist(); renderSummary(); });
 
 async function loadDesign(data) {
-  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [] });
+  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false });
   state.items = state.items.filter((it) => byId(it.productId));
   select(null);
   renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
@@ -1516,6 +1664,7 @@ if (KIOSK) {
 
 init();
 </script>
+<div id="quote"></div>
 <script src="kreadu.js"></script>
 </body>
 </html>

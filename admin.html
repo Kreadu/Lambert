@@ -130,6 +130,11 @@
         <div class="field" style="flex:1 1 220px"><label for="c-email">Correo</label><input class="input" id="c-email" type="email" maxlength="120"></div>
         <div class="field" style="flex:1 1 220px"><label for="c-web">Sitio web</label><input class="input" id="c-web" maxlength="160" placeholder="https://"></div>
       </div>
+      <div class="section">Cotización impresa</div>
+      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="field" style="flex:0 1 160px"><label for="c-validity">Válida por (días)</label><input class="input" id="c-validity" type="number" min="1" max="365" step="1"></div>
+        <div class="field" style="flex:1 1 300px"><label for="c-notes">Notas al pie <span class="muted">(formas de pago, entrega, garantía…)</span></label><textarea class="input" id="c-notes" maxlength="600" rows="3"></textarea></div>
+      </div>
       <button class="btn btn-primary" type="submit" id="companySave">Guardar datos</button>
       <div class="status" id="companyStatus"></div>
     </form>
@@ -222,6 +227,22 @@
               <option value="wall">Solo pared</option>
             </select>
           </div>
+          <div class="field"><label for="f-m2box">m² por caja <span class="muted">(vacío = se vende por m²)</span></label>
+            <input class="input" id="f-m2box" type="number" min="0" step="0.01" inputmode="decimal" placeholder="ej: 1,44"></div>
+        </div>
+        <div id="supplyFields" hidden>
+          <div class="row" style="flex-wrap:wrap;align-items:flex-start">
+            <div class="field" style="flex:2 1 220px"><label for="f-supply">En la cotización del diseñador</label>
+              <select class="input" id="f-supply">
+                <option value="">No se agrega solo</option>
+                <option value="adhesive">Pegante (cerámica)</option>
+                <option value="adhesive_porcelain">Pegante para porcelanato y gran formato</option>
+                <option value="grout">Boquilla (se elige el color más parecido a la cerámica)</option>
+              </select></div>
+            <div class="field" style="flex:1 1 140px"><label for="f-coverage">Rinde (m² por <span id="covUnit">unidad</span>)</label>
+              <input class="input" id="f-coverage" type="number" min="0" step="0.1" inputmode="decimal" placeholder="ej: 4"></div>
+          </div>
+          <p class="muted" style="margin:-4px 0 12px">Solo uno de cada tipo: si marcas otro, este deja de agregarse.</p>
         </div>
 
         <div class="field"><label>Ficha técnica</label>
@@ -289,7 +310,10 @@ let current = null;   // producto en edición (null = nuevo)
 let listCategory = "all";
 
 document.title = "Administrar";
-$("f-unit").addEventListener("change", () => { $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`; });
+$("f-unit").addEventListener("change", () => { $("cur").textContent = `${C.currency} por ${unitLabel($("f-unit").value)}`; $("covUnit").textContent = unitLabel($("f-unit").value); });
+$("f-placement").addEventListener("change", () => syncCategoryFields());
+// columnas de 009 (cajas e insumos): solo se envían si la base ya las tiene
+const has009 = () => "quote_validity_days" in (S.store || {});
 $("f-unit").innerHTML = Object.entries(UNITS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
 function fillCategorySelect() {
   const keep = $("f-category").value;
@@ -498,6 +522,9 @@ $("addFeature").addEventListener("click", () => featureRow());
 function syncCategoryFields() {
   const tile = isTile();
   $("tileFields").hidden = !tile;
+  // insumos: lo que no se dibuja en el baño (pegantes, boquillas…)
+  $("supplyFields").hidden = tile || $("f-placement").value !== "none";
+  $("covUnit").textContent = unitLabel($("f-unit").value);
   $("placementField").hidden = tile;
   $("spinPanel").hidden = tile;
   $("modelPanel").hidden = tile;
@@ -537,6 +564,9 @@ function openEditor(p) {
   $("f-tw").value = p?.tile_width_cm ?? "";
   $("f-th").value = p?.tile_height_cm ?? "";
   $("f-use").value = p?.surface_use ?? "both";
+  $("f-m2box").value = p?.m2_per_box ?? "";
+  $("f-supply").value = p?.supply_role ?? "";
+  $("f-coverage").value = p?.coverage_m2 ?? "";
   $("f-active").checked = p?.active ?? true;
   $("features").innerHTML = "";
   (p?.features?.length ? p.features : [{}]).forEach(featureRow);
@@ -554,6 +584,7 @@ $("productForm").addEventListener("submit", async (e) => {
   if (!Number.isFinite(price) || price < 0) return status("formStatus", "Precio inválido.", "err");
   const tile = isTile();
   if (tile && (!num("f-tw") || !num("f-th"))) return status("formStatus", "Indica el tamaño de la pieza de cerámica.", "err");
+  if (!tile && $("f-placement").value === "none" && $("f-supply").value && !num("f-coverage")) return status("formStatus", "Indica cuántos m² rinde para calcular la cantidad.", "err");
   const row = {
     name: $("f-name").value.trim(),
     category: $("f-category").value,
@@ -570,6 +601,11 @@ $("productForm").addEventListener("submit", async (e) => {
     tile_width_cm: tile ? num("f-tw") : null,
     tile_height_cm: tile ? num("f-th") : null,
     surface_use: tile ? $("f-use").value : null,
+    ...(has009() ? {
+      m2_per_box: tile ? num("f-m2box") || null : null,
+      supply_role: !tile && $("f-placement").value === "none" ? $("f-supply").value || null : null,
+      coverage_m2: !tile && $("f-placement").value === "none" ? num("f-coverage") || null : null,
+    } : {}),
     features: [...$("features").querySelectorAll(".row")]
       .map((r) => ({ label: r.querySelector(".fl").value.trim(), value: r.querySelector(".fv").value.trim() }))
       .filter((f) => f.label || f.value),
@@ -583,6 +619,8 @@ $("productForm").addEventListener("submit", async (e) => {
     : await db.from("products").insert({ ...row, store_id: C.storeId }).select().single();
   $("saveBtn").disabled = false;
   if (error) { console.error(error); return status("formStatus", "No se pudo guardar. Revisa los datos e intenta de nuevo.", "err"); }
+  // un solo pegante / boquilla de cada tipo por tienda
+  if (row.supply_role) await db.from("products").update({ supply_role: null }).eq("store_id", C.storeId).eq("supply_role", row.supply_role).neq("id", data.id);
   const isNew = !current;
   current = { media: [], variants: [], ...(current || {}), ...data };
   $("editorTitle").textContent = "Editar producto";
@@ -876,6 +914,7 @@ function fillCompany() {
   const s = S.store;
   $("c-name").value = s.name; $("c-legal").value = s.legal_name; $("c-tax").value = s.tax_id;
   $("c-country").value = s.country; $("c-currency").value = s.currency;
+  $("c-validity").value = s.quote_validity_days ?? 15; $("c-notes").value = s.quote_notes ?? "";
   $("c-city").value = s.city; $("c-address").value = s.address; $("c-email").value = s.email; $("c-web").value = s.website;
   $("c-waSlot").innerHTML = phoneField("c-wa", isoOfDial(s.whatsapp_cc, s.country), s.whatsapp, 'maxlength="15"');
   $("c-phoneSlot").innerHTML = phoneField("c-phone", isoOfDial(s.phone_cc, s.country), s.phone, 'maxlength="15"');
@@ -900,6 +939,7 @@ $("companyForm").addEventListener("submit", async (e) => {
     name: $("c-name").value.trim(), legal_name: $("c-legal").value.trim(), tax_id: $("c-tax").value.trim(),
     country, currency: $("c-currency").value, city: $("c-city").value.trim(), address: $("c-address").value.trim(),
     email: $("c-email").value.trim(), website: $("c-web").value.trim(),
+    ...(has009() ? { quote_validity_days: Math.min(365, Math.max(1, Math.round(num("c-validity") || 15))), quote_notes: $("c-notes").value.trim() } : {}),
     whatsapp_cc: wa?.dial ?? countryOf($("c-wa-cc").value).dial ?? dial, whatsapp: wa?.number ?? "",
     phone_cc: ph?.dial ?? countryOf($("c-phone-cc").value).dial ?? dial, phone: ph?.number ?? "",
     updated_at: new Date().toISOString(),

@@ -29,6 +29,17 @@ o la de `store` en `config.js`.
    país, correo y contraseña del dueño. El dueño entra a `admin.html` con ese correo y solo ve su tienda.
 4. Cada tienda llena **Mi empresa**: logo, razón social, país, moneda, WhatsApp y teléfono con código de país.
 
+## Cotización: cajas, pegante y boquilla (009)
+
+**SQL Editor** → pega `supabase/009-cajas-e-insumos.sql` → **Run**. Agrega:
+- **m² por caja** en la cerámica: la cotización redondea a cajas completas (se llena sola con la ficha técnica
+  "Piezas por caja: 8 (1,44 m²)"; sin ese dato se vende por m²).
+- **Insumos**: en el producto (categoría que "no se dibuja"), "En la cotización del diseñador" = pegante,
+  pegante para porcelanato o boquilla, y cuántos m² rinde cada unidad. La boquilla sale del color más
+  parecido a la cerámica.
+- **Mi empresa → Cotización impresa**: días de validez y notas al pie. "Imprimir" en el diseñador guarda el
+  diseño (para que lleve código y QR) e imprime una cotización con logo, datos de la tienda, vista 3D y planta.
+
 ## En la tienda
 
 Abre `tienda.html` en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.

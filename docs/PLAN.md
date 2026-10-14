@@ -42,5 +42,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - Varias tiendas (`008` + función `crear-tienda`): cada empresa con sus datos, logo, país, moneda, catálogo y
   diseños. Teléfonos con código de país. "Nueva tienda" en admin.html para los administradores de la plataforma.
 - 008 aplicada; la función está publicada como `swift-api`.
+- Cotización (`009`): cerámica en cajas completas, pegante y boquilla calculados, y cotización impresa con
+  logo, datos de la tienda, vista 3D y planta, validez y notas. Pendiente: correr `009`.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

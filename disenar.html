@@ -42,6 +42,27 @@
   .dims{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .dims label{font-size:12px;color:var(--text-tertiary)}
   .prod-list{display:flex;flex-direction:column;gap:4px}
+  /* paso 2: galería de cerámicas */
+  .surf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--surface-muted);border-radius:var(--radius-md);margin-bottom:8px}
+  .surf-tabs button{border:none;background:none;padding:8px;border-radius:calc(var(--radius-md) - 2px);cursor:pointer;font-weight:500;font-size:14px;color:var(--text-secondary)}
+  .surf-tabs button.active{background:var(--surface);color:var(--text-primary);box-shadow:var(--shadow-sm,0 1px 2px rgba(0,0,0,.08))}
+  .surf-sub{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+  .surf-sub button,.tile-types button{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-full);padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-secondary)}
+  .surf-sub button.active,.tile-types button.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface)}
+  .surf-now{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;font-size:13px;min-height:52px}
+  .surf-now img{width:36px;height:36px;border-radius:5px;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
+  .surf-now .muted{font-size:12px}
+  .surf-now button{margin-left:auto;flex-shrink:0;font-size:12px;padding:5px 10px}
+  .tile-types{display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:none}
+  .tile-types button{white-space:nowrap;flex-shrink:0}
+  .tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .tile-card{display:flex;flex-direction:column;gap:3px;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;text-align:left;overflow:hidden;font-size:11.5px;line-height:1.25}
+  .tile-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--surface-muted)}
+  .tile-card span{padding:0 6px}
+  .tile-card .tn{font-weight:500;color:var(--text-primary)}
+  .tile-card .tp{color:var(--text-tertiary);padding-bottom:6px}
+  .tile-card.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+  .tile-card:hover{border-color:var(--text-tertiary)}
   .prod{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;text-align:left;font-size:13px}
   .prod:hover{border-color:var(--text-tertiary)}
   .prod .sw{width:44px;height:44px;border-radius:6px;border:1px solid var(--border);flex-shrink:0;object-fit:cover}
@@ -139,18 +160,20 @@
       </section>
 
       <section class="pane" id="pane2">
-        <h3>Piso</h3>
-        <div class="field"><select class="input" id="floorTile" aria-label="Cerámica del piso"></select></div>
-        <h3>Paredes</h3>
-        <div class="field"><select class="input" id="wallTile" aria-label="Cerámica de las paredes"></select></div>
-        <label class="row" style="font-size:14px;margin:4px 0 8px"><input type="checkbox" id="eachWall"> Un diseño distinto en cada pared</label>
-        <div id="eachWallBox" hidden>
-          <div class="field"><label for="wt-back">Pared del fondo</label><select class="input wall-one" id="wt-back" data-side="back"></select></div>
-          <div class="field"><label for="wt-left">Pared izquierda</label><select class="input wall-one" id="wt-left" data-side="left"></select></div>
-          <div class="field"><label for="wt-right">Pared derecha</label><select class="input wall-one" id="wt-right" data-side="right"></select></div>
-          <div class="field"><label for="wt-front">Pared del frente (la de la puerta)</label><select class="input wall-one" id="wt-front" data-side="front"></select></div>
-          <p class="muted">"Igual que arriba" usa la cerámica general de las paredes.</p>
+        <div class="surf-tabs" id="surfTabs">
+          <button type="button" data-surf="floor" class="active">Piso</button>
+          <button type="button" data-surf="wall">Paredes</button>
         </div>
+        <div class="surf-sub" id="wallSides" hidden>
+          <button type="button" data-surf="wall" class="active">Todas</button>
+          <button type="button" data-surf="back">Fondo</button>
+          <button type="button" data-surf="left">Izquierda</button>
+          <button type="button" data-surf="right">Derecha</button>
+          <button type="button" data-surf="front">Frente</button>
+        </div>
+        <div class="surf-now" id="surfNow"></div>
+        <div class="tile-types" id="tileTypes"></div>
+        <div class="tile-grid" id="tileGrid"></div>
         <p class="muted">Se dibuja a escala real según el tamaño de la pieza. Solo aparecen colores con stock.</p>
       </section>
 
@@ -1018,44 +1041,69 @@ for (const id of ["rw", "rl", "rh"]) $(id).addEventListener("change", () => {
 $("doorWall").addEventListener("change", (e) => { state.room.doorWall = e.target.value; roomChanged(); });
 $("doorPos").addEventListener("input", (e) => { state.room.doorPos = Number(e.target.value); buildRoom(); updateWallVisibility(); persist(); });
 
-function tileOptions(use) {
-  const tiles = products.filter((p) => p.placement === "surface" && p.unit === "m2" && (p.surface_use === "both" || p.surface_use === use));
-  return `<option value="">Sin cerámica</option>` + tiles.map((p) =>
-    `<optgroup label="${esc(p.name)}">${p.variants.filter((v) => v.active).map((v) =>
-      `<option value="${p.id}|${v.id}" ${v.stock <= 0 ? "disabled" : ""}>${esc(v.name)}${v.stock <= 0 ? " (agotado)" : ""} · ${money.format(v.finalPrice)}/m²</option>`).join("")}</optgroup>`).join("");
-}
+// ── Paso 2: galería de cerámicas (piso, todas las paredes o una pared) ──
+const SIDE_LABEL = { back: "Pared del fondo", left: "Pared izquierda", right: "Pared derecha", front: "Pared del frente" };
+let surf = "floor";        // floor | wall | back | left | right | front
+let tileType = "all";      // filtro por subcategoría (Porcelanato, Mosaico…)
 const selKey = (sel) => (sel ? `${sel.productId}|${sel.variantId}` : "");
-function renderTileSelects() {
-  $("floorTile").innerHTML = tileOptions("floor");
-  $("wallTile").innerHTML = tileOptions("wall");
-  $("floorTile").value = selKey(state.floor);
-  $("wallTile").value = selKey(state.wall);
-  state.walls ||= {};
-  const own = Object.values(state.walls).some(Boolean);
-  $("eachWall").checked = own || $("eachWall").checked;
-  $("eachWallBox").hidden = !$("eachWall").checked;
-  document.querySelectorAll(".wall-one").forEach((el) => {
-    el.innerHTML = `<option value="same">Igual que arriba</option>` + tileOptions("wall");
-    el.value = state.walls[el.dataset.side] ? selKey(state.walls[el.dataset.side]) : "same";
-  });
+const tileImg = (p, v) => v?.texture || p.photos[0] || illustrate(p, v);
+const usesFloor = () => surf === "floor";
+const tilesFor = () => products.filter((p) => p.placement === "surface" && p.unit === "m2" && p.available &&
+  (p.surface_use === "both" || p.surface_use === (usesFloor() ? "floor" : "wall")));
+// lo elegido en la superficie actual: { productId, variantId } · null = sin cerámica · undefined = igual que las paredes
+function currentSel() {
+  if (surf === "floor") return state.floor;
+  if (surf === "wall") return state.wall;
+  return state.walls[surf] ? (state.walls[surf].productId ? state.walls[surf] : null) : undefined;
 }
-$("eachWall").addEventListener("change", (e) => {
-  $("eachWallBox").hidden = !e.target.checked;
-  if (!e.target.checked && Object.values(state.walls).some(Boolean)) { // vuelve a una sola cerámica
-    state.walls = {};
-    renderTileSelects(); buildRoom(); updateWallVisibility(); persist(); renderSummary();
-  }
+function setSel(sel) {
+  if (surf === "floor") state.floor = sel;
+  else if (surf === "wall") state.wall = sel;
+  else if (sel === undefined) delete state.walls[surf];
+  else state.walls[surf] = sel || { productId: null };
+  buildRoom(); updateWallVisibility(); persist(); renderSummary(); renderTileSelects();
+}
+function renderTileSelects() {
+  state.walls ||= {};
+  document.querySelectorAll("#surfTabs [data-surf]").forEach((b) => b.classList.toggle("active", b.dataset.surf === (usesFloor() ? "floor" : "wall")));
+  $("wallSides").hidden = usesFloor();
+  document.querySelectorAll("#wallSides [data-surf]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.surf === surf);
+    b.textContent = b.textContent.replace(/ •$/, "") + (state.walls[b.dataset.surf] ? " •" : ""); // • = tiene su propia cerámica
+  });
+  // lo que tiene ahora esta superficie
+  const sel = currentSel();
+  const where = surf === "floor" ? "Piso" : surf === "wall" ? "Todas las paredes" : SIDE_LABEL[surf];
+  const p = sel && byId(sel.productId), v = p && variantOf(p, sel.variantId);
+  $("surfNow").innerHTML = sel === undefined
+    ? `<span><b>${where}</b><br><span class="muted">Igual que las demás paredes</span></span>`
+    : p ? `<img src="${esc(tileImg(p, v))}" alt=""><span><b>${where}</b><br><span class="muted">${esc(p.name)} · ${esc(v?.name ?? "")}</span></span>
+        <button class="btn" type="button" data-clear>${surf === "floor" || surf === "wall" ? "Quitar" : "Igual que las demás"}</button>`
+    : `<span><b>${where}</b><br><span class="muted">Sin cerámica · elige una abajo</span></span>${surf !== "floor" && surf !== "wall" ? `<button class="btn" type="button" data-clear>Igual que las demás</button>` : ""}`;
+  // filtros por tipo y galería
+  const tiles = tilesFor();
+  const types = [...new Set(tiles.map((t) => t.subcategory || "Otras"))].sort((a, b) => a.localeCompare(b, "es"));
+  if (tileType !== "all" && !types.includes(tileType)) tileType = "all";
+  $("tileTypes").innerHTML = types.length > 1 ? [["all", `Todas (${tiles.reduce((n, t) => n + t.inStock.length, 0)})`], ...types.map((t) => [t, t])]
+    .map(([k, l]) => `<button type="button" data-type="${esc(k)}" class="${k === tileType ? "active" : ""}">${esc(l)}</button>`).join("") : "";
+  const shown = tiles.filter((t) => tileType === "all" || (t.subcategory || "Otras") === tileType);
+  $("tileGrid").innerHTML = shown.flatMap((t) => t.inStock.map((vv) => `<button type="button" class="tile-card ${sel && sel.productId === t.id && sel.variantId === vv.id ? "active" : ""}"
+      data-tile="${t.id}|${vv.id}" title="${esc(`${t.name} · ${vv.name}`)}"><img src="${esc(tileImg(t, vv))}" alt="" loading="lazy">
+      <span class="tn">${esc(vv.name)}</span><span class="muted">${esc(t.name)}</span><span class="tp">${money.format(vv.finalPrice)}/m²</span></button>`)).join("")
+    || `<p class="muted">No hay cerámica con stock para ${usesFloor() ? "piso" : "pared"}.</p>`;
+}
+$("surfTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-surf]"); if (b) { surf = b.dataset.surf; renderTileSelects(); } });
+$("wallSides").addEventListener("click", (e) => { const b = e.target.closest("[data-surf]"); if (b) { surf = b.dataset.surf; renderTileSelects(); } });
+$("tileTypes").addEventListener("click", (e) => { const b = e.target.closest("[data-type]"); if (b) { tileType = b.dataset.type; renderTileSelects(); } });
+$("tileGrid").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tile]");
+  if (!b) return;
+  const [productId, variantId] = b.dataset.tile.split("|");
+  setSel({ productId, variantId });
 });
-document.querySelectorAll(".wall-one").forEach((el) => el.addEventListener("change", () => {
-  const v = el.value;
-  if (v === "same") delete state.walls[el.dataset.side];
-  else { const [productId, variantId] = v.split("|"); state.walls[el.dataset.side] = productId ? { productId, variantId } : { productId: null }; }
-  buildRoom(); updateWallVisibility(); persist(); renderSummary();
-}));
-for (const [id, key] of [["floorTile", "floor"], ["wallTile", "wall"]]) $(id).addEventListener("change", (e) => {
-  const [productId, variantId] = e.target.value.split("|");
-  state[key] = productId ? { productId, variantId } : null;
-  buildRoom(); updateWallVisibility(); persist(); renderSummary();
+$("surfNow").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-clear]")) return;
+  setSel(surf === "floor" || surf === "wall" ? null : undefined);
 });
 
 let cat = "sanitarios";

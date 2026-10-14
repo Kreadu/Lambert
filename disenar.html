@@ -1057,7 +1057,11 @@ function roomChanged() {
 // elige un producto con stock de la categoría (el que coincide con la palabra clave, si hay)
 function pickProduct(cat, q) {
   const list = products.filter((p) => p.category === cat && p.available);
-  return list.find((p) => q?.test(`${p.subcategory} ${p.name}`)) || list[0] || null;
+  const base = list.find((p) => q?.test(`${p.subcategory} ${p.name}`)) || list[0] || null;
+  // los baños de muestra muestran primero lo que tiene foto real (si va en el mismo lugar: piso o pared)
+  if (!base || base.photos.length) return base;
+  return list.find((p) => p.photos.length && p.placement === base.placement && q?.test(`${p.subcategory} ${p.name}`))
+    || list.find((p) => p.photos.length && p.placement === base.placement) || base;
 }
 async function applyTemplate(id) {
   const t = TEMPLATES.find((x) => x.id === id);
@@ -1076,10 +1080,19 @@ async function applyTemplate(id) {
     }
     state.items.push(it);
   }
-  if (t.items(state.room).length) { // cerámica de muestra si no eligió ninguna
-    const tile = (use, q) => { const p = products.find((x) => x.placement === "surface" && x.unit === "m2" && x.available && (x.surface_use === "both" || x.surface_use === use) && q.test(x.name)); return p ? { productId: p.id, variantId: p.inStock[0].id } : null; };
-    state.floor ||= tile("floor", /porcelanato/i);
-    state.wall ||= tile("wall", /pared/i);
+  if (t.items(state.room).length) {
+    // cerámica de muestra: primero la que tiene textura real (foto de la pieza), si no, la de siempre
+    const fits = (x, use) => x.placement === "surface" && x.unit === "m2" && x.available && (x.surface_use === "both" || x.surface_use === use);
+    const textured = (use, skip) => {
+      for (const p of products) if (fits(p, use) && p.id !== skip) { const v = p.inStock.find((y) => y.texture); if (v) return { productId: p.id, variantId: v.id }; }
+      return null;
+    };
+    const tile = (use, q) => { const p = products.find((x) => fits(x, use) && q.test(x.name)); return p ? { productId: p.id, variantId: p.inStock[0].id } : null; };
+    state.floor = textured("floor") || state.floor || tile("floor", /porcelanato/i);
+    state.wall = state.wall || tile("wall", /pared/i);
+    // una pared del fondo con otra cerámica con textura (ej. baldosa hidráulica), para ver cómo queda
+    const accent = textured("wall", state.floor?.productId);
+    state.walls = accent ? { back: accent } : {};
   }
   select(null);
   renderRoomForm(); renderTileSelects();

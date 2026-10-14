@@ -99,6 +99,13 @@
   .install-box{margin-top:16px;padding:10px;border:1px dashed var(--border);border-radius:var(--radius-md);background:var(--surface-muted)}
   .install-box .sum-sec{margin-top:0}
   .total.grand{border-top:1px solid var(--border);margin-top:6px}
+  .inst-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .inst-row .muted{font-size:11.5px}
+  .inst-qty{display:flex;align-items:center;gap:4px}
+  .inst-qty b{min-width:18px;text-align:center;font-variant-numeric:tabular-nums}
+  .inst-row .icon-btn{width:28px;height:28px}
+  .inst-sub{font-variant-numeric:tabular-nums;white-space:nowrap;min-width:72px;text-align:right}
+  .inst-add{margin-top:8px}
   .summary-row .muted{font-size:12px}
   #quote{display:none}
   .total{display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding-top:8px}
@@ -377,6 +384,7 @@ const emptyState = () => ({
   walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
   supplies: true,                  // incluir pegante y boquilla en la cotización
+  install: { qty: {}, off: [], extra: [] }, // accesorios de instalación: cantidades cambiadas, quitados y agregados por el cliente
 });
 const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem(`lambert_diseno_${storeSlug()}`) || "null"); } catch { return null; } })();
 const state = saved?.room ? saved : emptyState();
@@ -1266,13 +1274,30 @@ function buildInstall(hasDesign) {
     const kp = byId(k.product_id);
     if (kp) add(kp, null, Number(k.qty), "el baño");
   }
-  const lines = [...acc.values()].map((g) => {
-    const qty = Math.ceil(g.qty - 1e-9);
-    const price = g.v?.finalPrice ?? g.p.price;
-    return { name: `${g.p.name}${g.v && g.v.name !== "Único" ? " · " + g.v.name : ""}`, img: g.p.photos[0] || illustrate(g.p, g.v), qty, unit: plural(unitLabel(g.p.unit), qty),
-      unitPrice: price, sub: qty * price, detail: `Para ${[...g.para.keys()].join(", ")}${g.p.available ? "" : " · sin stock por ahora"}` };
+  const ins = (state.install ||= { qty: {}, off: [], extra: [] });
+  const line = (p, v, qty, detail, key, kind) => {
+    const price = v?.finalPrice ?? p.price;
+    return { key, kind, name: `${p.name}${v && v.name !== "Único" ? " · " + v.name : ""}`, img: p.photos[0] || illustrate(p, v), qty, unit: plural(unitLabel(p.unit), qty),
+      unitPrice: price, sub: qty * price, detail: `${detail}${p.available ? "" : " · sin stock por ahora"}` };
+  };
+  // la recomendación del programa, con las cantidades que el cliente cambió o quitó
+  const lines = [];
+  let edited = false;
+  for (const [key, g] of acc) {
+    if (ins.off.includes(key)) { edited = true; continue; }
+    const rec = Math.ceil(g.qty - 1e-9);
+    const qty = ins.qty[key] ?? rec;
+    if (qty !== rec) edited = true;
+    lines.push(line(g.p, g.v, qty, `Recomendado para ${[...g.para.keys()].join(", ")}${qty !== rec ? ` (sugerido: ${rec})` : ""}`, key, "rec"));
+  }
+  // lo que el cliente agregó
+  ins.extra.forEach((x, i) => {
+    const p = byId(x.productId);
+    if (!p) return;
+    edited = true;
+    lines.push(line(p, variantOf(p, x.variantId), x.qty, "Agregado por ti", String(i), "extra"));
   });
-  return { lines, total: lines.reduce((n, x) => n + x.sub, 0) };
+  return { lines, total: lines.reduce((n, x) => n + x.sub, 0), edited, hidden: ins.off.length };
 }
 function buildQuote() {
   const { w, l, h } = state.room;
@@ -1338,6 +1363,37 @@ function buildQuote() {
   return { sections, total: sections.flatMap(([, ls]) => ls).reduce((n, x) => n + x.sub, 0), hasSupplies: supplies.length > 0, install: buildInstall(hasDesign) };
 }
 const qtyText = (x) => `${nf(x.qty)} ${x.unit}`;
+// accesorios que el cliente puede agregar: lo de instalación y plomería del catálogo (y lo que no se dibuja)
+const installChoices = () => products.filter((p) => (p.category === "instalacion" || (p.placement === "none" && !p.supply_role)) && p.category !== "pegantes")
+  .sort((a, b) => a.name.localeCompare(b.name, "es"));
+// cambios del cliente en los accesorios: + / −, quitar, agregar y volver a la recomendación
+$("summary").addEventListener("click", (e) => {
+  const ins = state.install;
+  const q = e.target.closest("[data-iq]"), off = e.target.closest("[data-ioff]");
+  if (q) {
+    const { kind, key, iq: d } = q.dataset;
+    const cur = quote.install.lines.find((x) => x.kind === kind && x.key === key);
+    const next = (cur?.qty ?? 0) + Number(d);
+    if (kind === "extra") { if (next <= 0) ins.extra.splice(Number(key), 1); else ins.extra[Number(key)].qty = next; }
+    else if (next <= 0) ins.off.push(key);
+    else ins.qty[key] = next;
+  } else if (off) {
+    const { kind, key } = off.dataset;
+    if (kind === "extra") ins.extra.splice(Number(key), 1); else ins.off.push(key);
+  } else if (e.target.id === "instReset") {
+    state.install = { qty: {}, off: [], extra: [] };
+  } else return;
+  persist(); renderSummary();
+});
+$("summary").addEventListener("change", (e) => {
+  if (e.target.id !== "instPick" || !e.target.value) return;
+  const p = byId(e.target.value);
+  const v = p.inStock[0] || p.variants[0];
+  const same = state.install.extra.find((x) => x.productId === p.id && x.variantId === v?.id);
+  if (same) same.qty++; else state.install.extra.push({ productId: p.id, variantId: v?.id ?? null, qty: 1 });
+  persist(); renderSummary();
+  flash(`Agregado: ${p.name}`);
+});
 function renderSummary() {
   quote = buildQuote();
   const { sections, total } = quote;
@@ -1345,10 +1401,18 @@ function renderSummary() {
     ? sections.map(([title, ls]) => `<div class="sum-sec">${esc(title)}</div>` + ls.map((x) => `<div class="summary-row">
         <span><b>${esc(qtyText(x))}</b> · ${esc(x.name)}<br><span class="muted">${esc(x.detail)}</span></span><span>${money.format(x.sub)}</span></div>`).join("")).join("") +
       `<div class="total"><span>Total</span><span>${money.format(total)}</span></div>` +
-      (quote.install.lines.length ? `<div class="install-box"><div class="sum-sec">Presupuesto adjunto · materiales de instalación</div>
-        <p class="muted" style="font-size:12px;margin:0 0 4px">Flexibles, llaves de paso, sifones, anclajes, tubería y sellantes para instalar lo que elegiste.</p>` +
-        quote.install.lines.map((x) => `<div class="summary-row"><span><b>${esc(qtyText(x))}</b> · ${esc(x.name)}<br><span class="muted">${esc(x.detail)}</span></span><span>${money.format(x.sub)}</span></div>`).join("") +
-        `<div class="total" style="font-size:15px"><span>Materiales de instalación</span><span>${money.format(quote.install.total)}</span></div>
+      (quote.install.lines.length || quote.install.edited || installChoices().length ? `<div class="install-box"><div class="sum-sec">Presupuesto adjunto · accesorios de instalación</div>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Lo que recomendamos para instalar lo que elegiste. Cambia las cantidades, quita lo que no necesites o agrega más accesorios.</p>` +
+        quote.install.lines.map((x) => `<div class="inst-row">
+          <span class="inst-name">${esc(x.name)}<br><span class="muted">${esc(x.detail)}</span></span>
+          <span class="inst-qty"><button type="button" class="icon-btn" data-iq="-1" data-kind="${esc(x.kind)}" data-key="${esc(x.key)}" aria-label="Uno menos">−</button>
+            <b>${nf(x.qty)}</b><button type="button" class="icon-btn" data-iq="1" data-kind="${esc(x.kind)}" data-key="${esc(x.key)}" aria-label="Uno más">+</button></span>
+          <span class="inst-sub">${money.format(x.sub)}</span>
+          <button type="button" class="icon-btn" data-ioff data-kind="${esc(x.kind)}" data-key="${esc(x.key)}" aria-label="Quitar">✕</button></div>`).join("") +
+        `<div class="inst-add"><select class="input" id="instPick" aria-label="Accesorio para agregar"><option value="">+ Agregar un accesorio…</option>${installChoices().map((p) =>
+            `<option value="${p.id}">${esc(p.name)} · ${money.format(p.inStock[0]?.finalPrice ?? p.price)}</option>`).join("")}</select></div>` +
+        (quote.install.edited ? `<button type="button" class="btn" id="instReset" style="width:100%;margin-top:6px;font-size:13px">Volver a la recomendación</button>` : "") +
+        `<div class="total" style="font-size:15px"><span>Accesorios de instalación</span><span>${money.format(quote.install.total)}</span></div>
         <div class="total grand"><span>Total con instalación</span><span>${money.format(total + quote.install.total)}</span></div></div>` : "")
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
   $("suppliesRow").hidden = !quote.hasSupplies;
@@ -1534,13 +1598,14 @@ async function saveDesign() {
   if (!state.items.length && !state.floor && !state.wall) { st("Agrega algo a tu baño antes de guardarlo.", "err"); return null; }
   $("saveBtn").disabled = true; st("Guardando…");
   const phone = phoneValue("cPhone");
-  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false };
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false, install: state.install };
   const { data: code, error } = await db.rpc("save_design", {
     p_store: C.storeId, p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(),
     p_phone: phone ? `+${phone.dial} ${phone.number}` : "", p_source: KIOSK ? "tienda" : "web",
   });
   $("saveBtn").disabled = false;
-  if (error) { console.error(error); st(/save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); return null; }
+  if (error) { console.error(error); st(/demasiados/.test(error.message) ? "Se guardaron muchos diseños seguidos. Espera un rato e intenta de nuevo."
+    : /save_design/.test(error.message) ? "Falta correr supabase/006-disenos-guardados.sql." : "No se pudo guardar. Intenta de nuevo.", "err"); return null; }
   st("");
   savedCode = code;
   $("codeArea").innerHTML = `<div class="code-box"><div class="muted">Tu código</div><div class="code">${esc(code)}</div>
@@ -1555,9 +1620,9 @@ const waNumber = () => { const v = phoneValue("cPhone"); return v ? v.dial + v.n
 const waUrl = (num, text) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 const roomLabel = () => `${fmtM(state.room.w)} × ${fmtM(state.room.l)}`;
 const budgetLines = () => lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n") +
-  (quote.install.lines.length ? `\nTotal diseño: ${money.format(lastTotal)}\n\nMateriales de instalación (presupuesto adjunto):\n` +
+  (quote.install.lines.length ? `\nTotal diseño: ${money.format(lastTotal)}\n\nAccesorios de instalación (presupuesto adjunto):\n` +
     quote.install.lines.map((x) => `• ${qtyText(x)} · ${x.name}: ${money.format(x.sub)}`).join("\n") +
-    `\nSubtotal materiales: ${money.format(quote.install.total)}\nTotal con instalación: ${money.format(lastTotal + quote.install.total)}` : "");
+    `\nSubtotal accesorios: ${money.format(quote.install.total)}\nTotal con instalación: ${money.format(lastTotal + quote.install.total)}` : "");
 // al cliente: su diseño y su presupuesto, para retomarlo cuando quiera
 $("waMe").onclick = () => {
   const num = waNumber();
@@ -1634,14 +1699,14 @@ function renderQuoteDoc() {
         <td class="n">${esc(qtyText(x))}</td><td class="n">${money.format(x.unitPrice)}</td><td class="n">${money.format(x.sub)}</td></tr>`).join("") + `</tbody></table>`).join("")}
     <div class="q-total"><span>Total</span><span>${money.format(quote.total)}</span></div>
     ${quote.install.lines.length ? `<section class="q-annex">
-      <div class="q-annex-title">Presupuesto adjunto · Materiales de instalación${savedCode ? ` <span>${esc(savedCode)}</span>` : ""}</div>
-      <p class="q-det" style="margin:0 0 6px">Lo necesario para instalar los productos de la cotización: flexibles, llaves de paso, sifones, anclajes, tubería y sellantes.</p>
+      <div class="q-annex-title">Presupuesto adjunto · Accesorios de instalación${savedCode ? ` <span>${esc(savedCode)}</span>` : ""}</div>
+      <p class="q-det" style="margin:0 0 6px">Accesorios recomendados para instalar los productos de la cotización${quote.install.edited ? ", ajustados por el cliente" : ""}. Opcional: queda a criterio del cliente.</p>
       <table class="q-table"><colgroup><col><col style="width:15%"><col style="width:17%"><col style="width:15%"></colgroup>
-        <thead><tr><th>Material</th><th class="n">Cantidad</th><th class="n">Precio unitario</th><th class="n">Subtotal</th></tr></thead><tbody>` +
+        <thead><tr><th>Accesorio</th><th class="n">Cantidad</th><th class="n">Precio unitario</th><th class="n">Subtotal</th></tr></thead><tbody>` +
         quote.install.lines.map((x) => `<tr><td><div class="q-prod"><img src="${esc(x.img)}" alt=""><div>${esc(x.name)}<div class="q-det">${esc(x.detail)}</div></div></div></td>
           <td class="n">${esc(qtyText(x))}</td><td class="n">${money.format(x.unitPrice)}</td><td class="n">${money.format(x.sub)}</td></tr>`).join("") + `</tbody></table>
-      <div class="q-total"><span>Materiales de instalación</span><span>${money.format(quote.install.total)}</span></div>
-      <div class="q-grand"><span>Total cotización + materiales</span><span>${money.format(quote.total + quote.install.total)}</span></div>
+      <div class="q-total"><span>Accesorios de instalación</span><span>${money.format(quote.install.total)}</span></div>
+      <div class="q-grand"><span>Total cotización + accesorios</span><span>${money.format(quote.total + quote.install.total)}</span></div>
     </section>` : ""}
     <div class="q-foot">
       <div class="q-notes">
@@ -1663,7 +1728,8 @@ $("printBtn").onclick = async () => {
 $("suppliesChk").addEventListener("change", (e) => { state.supplies = e.target.checked; persist(); renderSummary(); });
 
 async function loadDesign(data) {
-  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false });
+  Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false,
+    install: { qty: {}, off: [], extra: [], ...(data.install || {}) } });
   state.items = state.items.filter((it) => byId(it.productId));
   select(null);
   renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();

@@ -25,8 +25,24 @@
     <form id="loginForm">
       <div class="field"><label for="email">Correo</label><input class="input" id="email" type="email" autocomplete="username" required></div>
       <div class="field"><label for="password">Contraseña</label><div class="pass-field"><input class="input" id="password" type="password" autocomplete="current-password" required><button type="button" data-eye aria-label="Ver contraseña" title="Ver contraseña">👁</button></div></div>
-      <button class="btn btn-primary" type="submit">Ingresar</button>
+      <div class="row" style="flex-wrap:wrap;justify-content:space-between">
+        <button class="btn btn-primary" type="submit">Ingresar</button>
+        <a href="#" id="forgot" class="muted">¿Olvidaste tu contraseña?</a>
+      </div>
       <div class="status" id="loginStatus"></div>
+    </form>
+  </section>
+
+  <!-- Nueva contraseña (llega desde el correo de recuperación) -->
+  <section id="recovery" class="panel" hidden>
+    <h2>Nueva contraseña</h2>
+    <form id="recoveryForm">
+      <div class="field"><label for="newPass">Nueva contraseña <span class="muted">(mínimo 8)</span></label>
+        <div class="pass-field"><input class="input" id="newPass" type="password" autocomplete="new-password" minlength="8" required><button type="button" data-eye aria-label="Ver contraseña" title="Ver contraseña">👁</button></div></div>
+      <div class="field"><label for="newPass2">Repítela</label>
+        <div class="pass-field"><input class="input" id="newPass2" type="password" autocomplete="new-password" minlength="8" required><button type="button" data-eye aria-label="Ver contraseña" title="Ver contraseña">👁</button></div></div>
+      <button class="btn btn-primary" type="submit">Guardar contraseña</button>
+      <div class="status" id="recoveryStatus"></div>
     </form>
   </section>
 
@@ -89,7 +105,10 @@
       <h2 style="margin:0">Diseños guardados</h2>
       <button class="btn" type="button" id="dRefresh">↻ Actualizar</button>
     </div>
-    <div class="search-box"><input id="dSearch" type="search" placeholder="Buscar por código, nombre o celular" aria-label="Buscar diseños"></div>
+    <div class="row" style="flex-wrap:wrap;margin-bottom:12px;align-items:stretch">
+      <div class="search-box" style="flex:1 1 220px;margin:0"><input id="dSearch" type="search" placeholder="Buscar por código, nombre o celular" aria-label="Buscar diseños"></div>
+      <select class="input" id="dFilter" aria-label="Estado" style="flex:0 1 200px" hidden></select>
+    </div>
     <div class="status" id="dStatus"></div>
     <div id="designs"></div>
     <button class="btn" type="button" id="dMore" hidden style="margin-top:8px">Ver más</button>
@@ -129,42 +148,33 @@
       <div class="row" style="flex-wrap:wrap;gap:12px">
         <div id="logoPreview" class="logo-preview"></div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp">
+          <label class="btn" style="align-self:flex-start;cursor:pointer">Subir logo<input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden></label>
           <button class="btn btn-danger" type="button" id="logoDel" hidden style="align-self:flex-start">Quitar logo</button>
           <span class="muted">PNG con fondo transparente se ve mejor.</span>
         </div>
       </div>
       <div class="status" id="logoStatus"></div>
     </div>
-    <form id="companyForm">
-      <div class="field"><label for="c-name">Nombre comercial</label><input class="input" id="c-name" required maxlength="80"></div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:1 1 220px"><label for="c-legal">Razón social</label><input class="input" id="c-legal" maxlength="120"></div>
-        <div class="field" style="flex:1 1 160px"><label for="c-tax">Identificación tributaria <span class="muted">(NIT, RUT, RFC…)</span></label><input class="input" id="c-tax" maxlength="40"></div>
-      </div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:1 1 200px"><label for="c-country">País</label><select class="input" id="c-country"></select></div>
-        <div class="field" style="flex:1 1 140px"><label for="c-currency">Moneda de los precios</label><select class="input" id="c-currency"></select></div>
-      </div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:1 1 220px"><label for="c-city">Ciudad</label><input class="input" id="c-city" maxlength="80"></div>
-        <div class="field" style="flex:2 1 260px"><label for="c-address">Dirección</label><input class="input" id="c-address" maxlength="160"></div>
-      </div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:1 1 260px"><label for="c-wa">WhatsApp para cotizaciones <span class="muted">(vacío = no aparece "Hablar con un asesor")</span></label><div id="c-waSlot"></div></div>
-        <div class="field" style="flex:1 1 260px"><label for="c-phone">Teléfono</label><div id="c-phoneSlot"></div></div>
-      </div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:1 1 220px"><label for="c-email">Correo</label><input class="input" id="c-email" type="email" maxlength="120"></div>
-        <div class="field" style="flex:1 1 220px"><label for="c-web">Sitio web</label><input class="input" id="c-web" maxlength="160" placeholder="https://"></div>
-      </div>
-      <div class="section">Cotización impresa</div>
-      <div class="row" style="flex-wrap:wrap;align-items:flex-start">
-        <div class="field" style="flex:0 1 160px"><label for="c-validity">Válida por (días)</label><input class="input" id="c-validity" type="number" min="1" max="365" step="1"></div>
-        <div class="field" style="flex:1 1 300px"><label for="c-notes">Notas al pie <span class="muted">(formas de pago, entrega, garantía…)</span></label><textarea class="input" id="c-notes" maxlength="600" rows="3"></textarea></div>
-      </div>
+    <form id="companyForm" class="form-grid">
+      <div class="field span2"><label for="c-name">Nombre comercial</label><input class="input" id="c-name" required maxlength="80"></div>
+      <div class="field"><label for="c-legal">Razón social</label><input class="input" id="c-legal" maxlength="120"></div>
+      <div class="field"><label for="c-tax">NIT / identificación tributaria</label><input class="input" id="c-tax" maxlength="40" placeholder="NIT, RUT, RFC…"></div>
+      <div class="field"><label for="c-country">País</label><select class="input" id="c-country"></select></div>
+      <div class="field"><label for="c-currency">Moneda de los precios</label><select class="input" id="c-currency"></select></div>
+      <div class="field"><label for="c-city">Ciudad</label><input class="input" id="c-city" maxlength="80"></div>
+      <div class="field"><label for="c-address">Dirección</label><input class="input" id="c-address" maxlength="160"></div>
+      <div class="field"><label for="c-wa">WhatsApp para cotizaciones</label><div id="c-waSlot"></div>
+        <span class="hint">Vacío = no aparece "Hablar con un asesor".</span></div>
+      <div class="field"><label for="c-phone">Teléfono</label><div id="c-phoneSlot"></div></div>
+      <div class="field"><label for="c-email">Correo</label><input class="input" id="c-email" type="email" maxlength="120"></div>
+      <div class="field"><label for="c-web">Sitio web</label><input class="input" id="c-web" maxlength="160" placeholder="https://"></div>
+      <div class="section span2">Cotización impresa</div>
+      <div class="field"><label for="c-validity">Válida por (días)</label><input class="input" id="c-validity" type="number" min="1" max="365" step="1"></div>
+      <div class="field span2"><label for="c-notes">Notas al pie</label><textarea class="input" id="c-notes" maxlength="600" rows="3" placeholder="Formas de pago, tiempo de entrega, garantía…"></textarea></div>
+      <div class="span2">
       <button class="btn btn-primary" type="submit" id="companySave">Guardar datos</button>
       <div class="status" id="companyStatus"></div>
+      </div>
     </form>
     <div class="section">Enlaces de esta tienda</div>
     <div id="storeLinks" class="muted" style="display:flex;flex-direction:column;gap:4px"></div>
@@ -356,7 +366,7 @@ const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"],
 let tab = "productos";
 function show(section) {
   const main = section === "listPanel";
-  ["login", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
+  ["login", "recovery", "editor", "notice"].forEach((s) => { $(s).hidden = s !== section; });
   $("tabs").hidden = !main;
   $("myCompany").hidden = !S.store || section === "login";
   for (const [k, ids] of Object.entries(TABS)) ids.forEach((id) => { $(id).hidden = !main || k !== tab; });
@@ -388,6 +398,7 @@ const isTile = () => CATEGORIES.find((c) => c.slug === $("f-category").value)?.p
 
 // ── Sesión ──
 async function start() {
+  if (recovering) return;
   if (!configured) return notice("<b>Falta conectar Supabase.</b> Completa <code>supabaseUrl</code> y <code>supabaseKey</code> en <code>config.js</code>.");
   const { data: { session } } = await db.auth.getSession();
   if (!session) { $("logout").hidden = true; return show("login"); }
@@ -440,6 +451,36 @@ $("loginForm").addEventListener("submit", async (e) => {
   start();
 });
 $("logout").addEventListener("click", async () => { await db.auth.signOut(); start(); });
+// ── Olvidé mi contraseña: correo con enlace de vuelta a esta página ──
+let recovering = false;
+$("forgot").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const email = $("email").value.trim();
+  if (!email) { $("email").focus(); return status("loginStatus", "Escribe tu correo y vuelve a tocar \"¿Olvidaste tu contraseña?\".", "err"); }
+  status("loginStatus", "Enviando…");
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if (error) { console.error(error); return status("loginStatus", /rate|seconds/i.test(error.message) ? "Espera un momento antes de pedir otro correo." : "No se pudo enviar el correo.", "err"); }
+  status("loginStatus", `Si ${email} tiene cuenta, te llegó un correo con un enlace para crear una contraseña nueva.`, "ok");
+});
+db?.auth.onAuthStateChange((event) => {
+  if (event !== "PASSWORD_RECOVERY") return;
+  recovering = true;
+  $("logout").hidden = true;
+  show("recovery");
+  $("newPass").focus();
+});
+$("recoveryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if ($("newPass").value.length < 8) return status("recoveryStatus", "Mínimo 8 caracteres.", "err");
+  if ($("newPass").value !== $("newPass2").value) return status("recoveryStatus", "Las dos contraseñas no coinciden.", "err");
+  status("recoveryStatus", "Guardando…");
+  const { error } = await db.auth.updateUser({ password: $("newPass").value });
+  if (error) { console.error(error); return status("recoveryStatus", "No se pudo cambiar. Pide otro correo e intenta de nuevo.", "err"); }
+  recovering = false;
+  history.replaceState(null, "", location.pathname);
+  status("recoveryStatus", "");
+  start();
+});
 
 // ── Lista ──
 async function refreshList() {
@@ -881,8 +922,9 @@ let designs = [], designsDone = false, dQuery = "";
 async function loadDesigns(more = false) {
   if (!more) { designs = []; designsDone = false; }
   status("dStatus", "Cargando…");
-  let q = db.from("designs").select("id, code, data, total, customer_name, customer_phone, source, created_at")
+  let q = db.from("designs").select("*")
     .eq("store_id", C.storeId).order("created_at", { ascending: false }).range(designs.length, designs.length + PAGE - 1);
+  if (dStatusFilter) q = q.eq("status", dStatusFilter);
   if (dQuery) {
     const t = dQuery.replace(/[%*,()]/g, " ").trim();
     q = q.or(`code.ilike.*${t}*,customer_name.ilike.*${t}*,customer_phone.ilike.*${t}*`);
@@ -895,8 +937,16 @@ async function loadDesigns(more = false) {
   status("dStatus", "");
   designs.push(...data);
   designsDone = data.length < PAGE;
+  // estados (011): el filtro aparece cuando la base los tiene
+  if (data.length && "status" in data[0] && $("dFilter").hidden) {
+    $("dFilter").innerHTML = `<option value="">Todos los estados</option>` + Object.entries(D_STATUS).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join("");
+    $("dFilter").hidden = false;
+  }
   renderDesigns();
 }
+const D_STATUS = { nuevo: ["Nuevo", "#2563eb"], contactado: ["Contactado", "#d97706"], cotizado: ["Cotizado", "#7c3aed"], vendido: ["Vendido ✓", "#16a34a"], descartado: ["Descartado", "#6b7280"] };
+let dStatusFilter = "";
+$("dFilter").addEventListener("change", (e) => { dStatusFilter = e.target.value; loadDesigns(); });
 function renderDesigns() {
   const when = new Intl.DateTimeFormat(C.locale, { dateStyle: "medium", timeStyle: "short" });
   const m = (v) => (Number(v) || 0).toLocaleString(C.locale, { maximumFractionDigits: 2 });
@@ -920,6 +970,11 @@ function renderDesigns() {
         <div style="font-size:14px">${esc(who)}</div>
         <div class="muted">${esc(extras)}</div>
         ${names.length ? `<div class="muted" style="margin-top:2px">${esc(names.join(", "))}</div>` : ""}
+        ${"status" in d ? `<div class="d-follow">
+          <select class="input d-status" data-st="${d.id}" aria-label="Estado de ${esc(d.code)}" style="border-color:${D_STATUS[d.status]?.[1] ?? "var(--border)"};color:${D_STATUS[d.status]?.[1] ?? "inherit"}">
+            ${Object.entries(D_STATUS).map(([k, [l]]) => `<option value="${k}" ${k === d.status ? "selected" : ""}>${l}</option>`).join("")}</select>
+          <input class="input d-note" data-note="${d.id}" maxlength="1000" placeholder="Nota: llamar el martes, quiere otro color…" value="${esc(d.notes)}" aria-label="Nota de ${esc(d.code)}">
+        </div>` : ""}
       </div>
       <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <a class="btn" href="disenar.html?d=${encodeURIComponent(d.code)}" target="_blank" rel="noopener">Abrir ↗</a>
@@ -930,6 +985,18 @@ function renderDesigns() {
   }).join("") : `<div class="empty"><strong>${dQuery ? "Nada coincide" : "Aún no hay diseños guardados"}</strong>${dQuery ? "Prueba con otro código, nombre o celular." : "Aparecen aquí cuando un cliente guarda su baño en el diseñador."}</div>`;
   $("dMore").hidden = designsDone;
 }
+// estado y nota: se guardan al cambiar
+$("designs").addEventListener("change", async (e) => {
+  const id = e.target.dataset.st || e.target.dataset.note;
+  if (!id) return;
+  const d = designs.find((x) => x.id === id);
+  const change = e.target.dataset.st ? { status: e.target.value } : { notes: e.target.value.trim() };
+  const { error } = await db.from("designs").update({ ...change, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) { console.error(error); return status("dStatus", "No se pudo guardar el cambio.", "err"); }
+  Object.assign(d, change);
+  status("dStatus", `${d.code}: guardado ✓`, "ok");
+  if (e.target.dataset.st) renderDesigns();
+});
 $("designs").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-del]");
   if (!b) return;
@@ -966,7 +1033,7 @@ function fillCompany() {
   renderLogo();
   const base = location.href.replace(/admin\.html.*$/, "");
   const q = `?t=${encodeURIComponent(s.slug)}`;
-  $("storeLinks").innerHTML = [["Catálogo", "catalogo.html"], ["Pantalla de la tienda", "tienda.html"], ["Diseñador de baños", "disenar.html"]]
+  $("storeLinks").innerHTML = [["Página de inicio", "index.html"], ["Catálogo", "catalogo.html"], ["Diseñador de baños", "disenar.html"], ["Pantalla del local (kiosco)", "tienda.html"]]
     .map(([l, f]) => `<span>${l}: <a href="${f}${q}" target="_blank" rel="noopener">${esc(base + f + q)}</a></span>`).join("");
 }
 // al cambiar de país: su moneda y su código de teléfono (si el número aún está vacío)
@@ -1041,10 +1108,22 @@ function renderStores() {
       ${x.logo_path ? `<img src="${esc(fileUrl(x.logo_path))}" alt="" style="object-fit:contain">` : `<span class="ph"></span>`}
       <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(x.name)}${x.id === C.storeId ? ' <span class="muted">· la que estás viendo</span>' : ""}</div>
         <div class="muted">?t=${esc(x.slug)} · ${esc(countryOf(x.country).name)} · ${esc(x.currency)}${x.email ? " · " + esc(x.email) : ""}${x.active ? "" : " · inactiva"}</div></div>
+      <button class="btn" type="button" data-active="${x.id}" title="${x.active ? "Ocultar la tienda al público" : "Volver a mostrar la tienda"}">${x.active ? "Desactivar" : "Activar"}</button>
       ${x.id === C.storeId ? "" : `<button class="btn" type="button" data-enter="${x.id}">Administrar</button>`}
     </div>`).join("");
 }
-$("storesList").addEventListener("click", (e) => {
+$("storesList").addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-active]");
+  if (a) {
+    const x = stores.find((y) => y.id === a.dataset.active);
+    if (x.active && !confirm(`¿Desactivar ${x.name}? Su catálogo, su diseñador y su pantalla dejan de verse. El dueño todavía puede entrar al admin.`)) return;
+    a.disabled = true;
+    const { data, error } = await db.from("stores").update({ active: !x.active, updated_at: new Date().toISOString() }).eq("id", x.id).select().single();
+    if (error) { console.error(error); a.disabled = false; return status("newStoreStatus", "No se pudo cambiar.", "err"); }
+    stores = stores.map((y) => (y.id === x.id ? data : y));
+    renderStores();
+    return;
+  }
   const b = e.target.closest("[data-enter]");
   if (b) { tab = "productos"; enterStore(stores.find((x) => x.id === b.dataset.enter)); }
 });

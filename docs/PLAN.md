@@ -45,6 +45,10 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - Cotización (`009`): cerámica en cajas completas, pegante y boquilla calculados, y cotización impresa con
   logo, datos de la tienda, vista 3D y planta, validez y notas. Pendiente: correr `009`.
 - Materiales de instalación por producto en un presupuesto adjunto, código de barras por variante e ingreso de
-  inventario con la cámara (`010`, `escaner.js`). Pendiente: correr `010`.
+  inventario con la cámara (`010`, `escaner.js`). El cliente edita los accesorios recomendados.
+- `index.html` es la página de inicio de Lambert (se quitó la plantilla de ropa); `tienda.html` la abre en modo kiosco.
+- Seguimiento de diseños, límite de guardado, tiendas activas/inactivas y recuperar contraseña (`011`).
+  Excel con código de barras, m² por caja y rendimiento. Pruebas automáticas: `npm test` (16 pruebas).
+- Pendiente: correr `011`; agregar la dirección publicada de admin.html en Redirect URLs de Supabase.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

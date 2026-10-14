@@ -1,0 +1,12 @@
+{
+  "name": "lambert",
+  "private": true,
+  "description": "Catálogo y diseñador de baños (páginas HTML + Supabase). Sin compilar: se sirven tal cual.",
+  "scripts": {
+    "dev": "python3 -m http.server 8080 --bind 127.0.0.1",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
+}

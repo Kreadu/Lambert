@@ -33,7 +33,7 @@ create table if not exists public.products (
   category    text not null default 'general',
   price       numeric(14,2) not null check (price >= 0),
   description text not null default '',
-  features    jsonb not null default '[]'::jsonb,   -- [{"label":"Material","value":"Algodón"}]
+  features    jsonb not null default '[]'::jsonb,   -- [{"label":"Material","value":"Porcelana"}]
   sizes       text[] not null default '{}',
   colors      text[] not null default '{}',          -- colores en hex: {"#000000","#f5f0e8"}
   active      boolean not null default true,

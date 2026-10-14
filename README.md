@@ -1,8 +1,9 @@
 # Lambert
 
-- `index.html`: tienda (catálogo de ejemplo, carrito, pedidos por WhatsApp, chat y reseñas), publicada en Netlify.
+- `index.html`: página de inicio de la tienda: baños de muestra, "Tengo mis medidas", catálogo y "Tengo un código".
+  Con `?modo=tienda` es la pantalla del local (kiosco); `tienda.html` la abre así.
 - `catalogo.html`: catálogo de productos de baño (cerámica, sanitarios, lavamanos, duchas, grifería…), que lee de Supabase. Tiene variantes de color con stock, medidas, fotos, vista 360° y modelo 3D.
-- `tienda.html`: pantalla de inicio para la tienda (modo kiosco): baños de muestra, "Tengo mis medidas", catálogo y "Tengo un código".
+- `tienda.html`: acceso directo a la pantalla del local (`index.html?modo=tienda`).
 - `disenar.html`: diseñador 3D por pasos (baño, piso y paredes, productos, resumen) con vista 3D y de planta; guarda el diseño con un código y QR, imprime y envía por WhatsApp. Con `?modo=tienda` vuelve al inicio si nadie lo usa.
 - `admin.html`: panel con clave para crear productos (precio, medidas, ficha técnica, variantes con SKU y stock, y textura para la cerámica) y subir fotos, vista 360° y modelo 3D (.glb).
 
@@ -46,15 +47,31 @@ o la de `store` en `config.js`.
 - **🔧 Instalación** (admin): qué materiales lleva cada producto (por cada sanitario, lavamanos, mueble…) y qué
   lleva el baño una vez (tubería, rejilla, cinta, silicona). El diseñador los suma en un **presupuesto adjunto**,
   aparte de la cotización, con su propio total y el total con instalación (también en la cotización impresa y
-  en WhatsApp). Trae kits de muestra para Lambert.
+  en WhatsApp). El cliente lo puede editar: cambiar cantidades, quitar y agregar accesorios. Trae kits de muestra.
 - **Código de barras** del proveedor en cada color o variante (único por tienda), con botón 📷 para escanearlo.
 - **📦 Ingresar inventario** (admin): escanea con la cámara del celular o un lector USB/Bluetooth, pon la
   cantidad y "Ingresar al inventario" suma el stock y deja el registro. Un código que no está se asigna a su
   producto una sola vez. Mismo lector que Miel: el del navegador, y en iPhone `barcode-detector` (zxing).
 
+## Seguimiento, límites y contraseña (011)
+
+**SQL Editor** → pega `supabase/011-seguimiento-y-limites.sql` → **Run** (después de 010).
+- **Diseños guardados**: estado (Nuevo, Contactado, Cotizado, Vendido, Descartado), nota y filtro por estado.
+- **Límite**: 30 diseños por hora desde una misma conexión y 500 por hora por tienda.
+- **Tiendas**: solo la plataforma (Kreadu) las activa o desactiva (pestaña Tiendas). Una tienda inactiva no se ve.
+- **¿Olvidaste tu contraseña?** en admin.html: llega un correo con un enlace para crear otra. En Supabase →
+  Authentication → URL Configuration, agrega la dirección de `admin.html` (la publicada) en *Redirect URLs*.
+
+## Pruebas
+
+`npm install` una vez y `npm test`: abre las páginas en Chromium y revisa la página de inicio, el catálogo, el
+diseñador (cajas, pegante, accesorios editables, cotización impresa), el admin (Mi empresa alineada, ojo de la
+contraseña, escáner) y que nada se salga de la pantalla en el celular. Lee el catálogo real pero no escribe nada.
+`npm run dev` sirve las páginas en http://127.0.0.1:8080.
+
 ## En la tienda
 
-Abre `tienda.html` en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.
+Abre `tienda.html` (o `index.html?modo=tienda`) en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.
 Para que aparezca "Hablar con un asesor", pon el WhatsApp en admin.html → **Mi empresa**.
 
 ## Fotos 3D

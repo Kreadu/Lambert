@@ -8,7 +8,10 @@
 
   // ── Columnas: nombres que se aceptan para cada dato ──
   const COLUMNS = {
-    sku: ["sku", "referencia", "ref", "codigo", "cod", "codigo de barras", "referencia variante"],
+    sku: ["sku", "referencia", "ref", "codigo", "cod", "referencia variante"],
+    barcode: ["codigo de barras", "codigo barras", "cod barras", "cod. barras", "ean", "ean13", "upc", "barcode"],
+    m2_per_box: ["m2 por caja", "m² por caja", "m2 caja", "m² caja", "metros por caja"],
+    coverage_m2: ["rinde", "rinde m2", "rinde m²", "rendimiento", "rendimiento m2", "rendimiento m²"],
     name: ["nombre", "producto", "articulo", "nombre del producto"],
     variant: ["color", "variante", "acabado", "color / acabado", "color/acabado"],
     price: ["precio", "precio venta", "precio de venta", "pvp", "valor", "precio unitario", "precio publico"],
@@ -23,7 +26,11 @@
     depth: ["fondo", "profundidad", "fondo cm"],
     color_hex: ["color hex", "hex", "codigo color"],
   };
-  const HEADERS = ["sku", "nombre", "color / acabado", "precio", "stock", "categoria", "subcategoria", "marca", "unidad", "descripcion", "ancho", "alto", "fondo", "color hex"];
+  const HEADERS = ["sku", "nombre", "color / acabado", "precio", "stock", "categoria", "subcategoria", "marca", "unidad", "descripcion", "ancho", "alto", "fondo", "color hex",
+    "codigo de barras", "m2 por caja", "rinde (m2)"];
+  // columnas nuevas (009 y 010): solo se importan si la base ya las tiene
+  const hasBarcode = () => ctx.products().some((p) => p.variants.some((v) => "barcode" in v));
+  const hasBoxes = () => ctx.products().some((p) => "m2_per_box" in p);
 
   function mapHeader(h) {
     const n = norm(h).replace(/\s*\(.*\)$/, "");
@@ -112,7 +119,8 @@
       const base = [p.name, null, null, null, categoryLabel(p.category), p.subcategory, p.brand, p.unit, p.description, p.width_cm ?? "", p.height_cm ?? "", p.depth_cm ?? ""];
       const list = p.variants.length ? p.variants : [null];
       for (const v of list) {
-        rows.push([v?.sku || p.sku || "", base[0], v?.name ?? "", v ? (v.price ?? p.price) : p.price, v ? v.stock : "", ...base.slice(4), v?.color_hex ?? ""]);
+        rows.push([v?.sku || p.sku || "", base[0], v?.name ?? "", v ? (v.price ?? p.price) : p.price, v ? v.stock : "", ...base.slice(4), v?.color_hex ?? "",
+          v?.barcode ?? "", p.m2_per_box ?? "", p.coverage_m2 ?? ""]);
       }
     }
     download(`catalogo-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(rows));
@@ -121,8 +129,10 @@
   function downloadTemplate() {
     download("plantilla-catalogo.csv", toCSV([
       HEADERS,
-      ["COR-SAN-001-BL", "Sanitario one piece alongado", "Blanco", "890.000", "12", "Sanitarios", "One piece", "Corona", "unidad", "Doble descarga 4,8 L", "38", "72", "70", "#f7f7f5"],
-      ["COR-SAN-001-NE", "Sanitario one piece alongado", "Negro mate", "1.290.000", "3", "Sanitarios", "One piece", "Corona", "unidad", "", "", "", "", "#222222"],
+      ["COR-SAN-001-BL", "Sanitario one piece alongado", "Blanco", "890.000", "12", "Sanitarios", "One piece", "Corona", "unidad", "Doble descarga 4,8 L", "38", "72", "70", "#f7f7f5", "7702004003508", "", ""],
+      ["COR-SAN-001-NE", "Sanitario one piece alongado", "Negro mate", "1.290.000", "3", "Sanitarios", "One piece", "Corona", "unidad", "", "", "", "", "#222222", "7702004003515", "", ""],
+      ["POR-MAR-60120-CA", "Porcelanato tipo mármol 60×120", "Carrara", "118.000", "40", "Cerámica y baldosas", "Porcelanato", "", "m2", "", "", "", "", "#ecebe7", "", "1,44", ""],
+      ["PEG-POR-25", "Pegante para porcelanato 25 kg", "Gris", "62.000", "20", "Pegantes y boquillas", "Pegantes", "", "bulto", "", "", "", "", "", "", "", "3"],
     ]));
   }
 
@@ -135,11 +145,17 @@
     if (!cols.includes("sku") && !cols.includes("name")) throw new Error("No encontré la columna de referencia (SKU) ni la de nombre. Revisa la primera fila o descarga la plantilla.");
     const products = ctx.products();
     const bySkuV = new Map(), bySkuP = new Map(), byName = new Map();
+    const byBarcode = new Map();
     for (const p of products) {
       if (p.sku) bySkuP.set(norm(p.sku), p);
       byName.set(norm(p.name), p);
-      for (const v of p.variants) if (v.sku) bySkuV.set(norm(v.sku), { p, v });
+      for (const v of p.variants) {
+        if (v.sku) bySkuV.set(norm(v.sku), { p, v });
+        if (v.barcode) byBarcode.set(String(v.barcode).trim(), { p, v });
+      }
     }
+    const useBarcode = hasBarcode(), useBoxes = hasBoxes();
+    const touchedProducts = new Set();
     const { CATEGORIES, slugify } = window.Lambert;
     const findCat = (t) => { const n = norm(t); return CATEGORIES.find((c) => c.slug === slugify(t) || norm(c.label) === n)?.slug; };
 
@@ -153,9 +169,24 @@
       const stock = r.stock != null ? parseNumber(r.stock) : null;
       if (r.price != null && (price == null || price < 0)) return out.errors.push(`Fila ${line}: precio "${r.price}" no es un número.`);
       if (r.stock != null && (stock == null || stock < 0 || !Number.isInteger(stock))) return out.errors.push(`Fila ${line}: stock "${r.stock}" debe ser un número entero.`);
+      const barcode = useBarcode && r.barcode ? String(r.barcode).replace(/\.0+$/, "").trim() : null; // Excel a veces lo vuelve número
+      if (barcode && !/^[0-9A-Za-z. -]{1,64}$/.test(barcode)) return out.errors.push(`Fila ${line}: el código de barras "${r.barcode}" tiene caracteres no válidos.`);
+      const m2box = useBoxes && r.m2_per_box != null ? parseNumber(r.m2_per_box) : null;
+      const cover = useBoxes && r.coverage_m2 != null ? parseNumber(r.coverage_m2) : null;
+      if ((r.m2_per_box != null && useBoxes && !(m2box > 0)) || (r.coverage_m2 != null && useBoxes && !(cover > 0))) return out.errors.push(`Fila ${line}: "m² por caja" y "rinde" deben ser números mayores que 0.`);
+      // datos del producto (m² por caja, rendimiento): una sola vez por producto
+      const productChange = (p) => {
+        if (!p || touchedProducts.has(p.id)) return;
+        const change = {};
+        if (m2box != null && m2box !== Number(p.m2_per_box)) change.m2_per_box = m2box;
+        if (cover != null && cover !== Number(p.coverage_m2)) change.coverage_m2 = cover;
+        if (!Object.keys(change).length) return;
+        touchedProducts.add(p.id);
+        out.updates.push({ line, kind: "product", id: p.id, label: p.name, from: { m2_per_box: p.m2_per_box, coverage_m2: p.coverage_m2 }, change });
+      };
 
-      // 1) SKU de variante · 2) SKU de producto (+ color) · 3) nombre (+ color)
-      let hit = r.sku && bySkuV.get(norm(r.sku));
+      // 0) código de barras · 1) SKU de variante · 2) SKU de producto (+ color) · 3) nombre (+ color)
+      let hit = (barcode && byBarcode.get(barcode)) || (r.sku && bySkuV.get(norm(r.sku)));
       let p = hit?.p || (r.sku && bySkuP.get(norm(r.sku))) || (r.name && byName.get(norm(r.name)));
       let v = hit?.v || (p && r.variant ? p.variants.find((x) => norm(x.name) === norm(r.variant)) : null);
       if (p && !v && p.variants.length === 1 && !r.variant) v = p.variants[0];
@@ -165,18 +196,22 @@
         const cur = v.price ?? p.price;
         if (price != null && price !== cur) change.price = price;
         if (stock != null && stock !== v.stock) change.stock = stock;
-        if (Object.keys(change).length) out.updates.push({ line, kind: "variant", id: v.id, label: `${p.name} · ${v.name}`, from: { price: cur, stock: v.stock }, change });
+        if (barcode && barcode !== v.barcode) change.barcode = barcode;
+        productChange(p);
+        if (Object.keys(change).length) out.updates.push({ line, kind: "variant", id: v.id, label: `${p.name} · ${v.name}`, from: { price: cur, stock: v.stock, barcode: v.barcode }, change });
         else out.same++;
         return;
       }
       if (p && !r.variant && !p.variants.length) {
         if (price != null && price !== p.price) out.updates.push({ line, kind: "product", id: p.id, label: p.name, from: { price: p.price }, change: { price } });
         else out.same++;
-        if (stock != null) out.creates.push({ line, kind: "variant", productId: p.id, label: `${p.name} · Único`, row: { name: "Único", sku: r.sku || null, stock, price: null } });
+        productChange(p);
+        if (stock != null) out.creates.push({ line, kind: "variant", productId: p.id, label: `${p.name} · Único`, row: { name: "Único", sku: r.sku || null, stock, price: null, ...(barcode ? { barcode } : {}) } });
         return;
       }
       if (p && r.variant) {
-        out.creates.push({ line, kind: "variant", productId: p.id, label: `${p.name} · ${r.variant}`, row: { name: r.variant, sku: r.sku || null, stock: stock ?? 0, price: price != null && price !== p.price ? price : null, color_hex: /^#[0-9a-f]{6}$/i.test(r.color_hex || "") ? r.color_hex : null } });
+        productChange(p);
+        out.creates.push({ line, kind: "variant", productId: p.id, label: `${p.name} · ${r.variant}`, row: { name: r.variant, sku: r.sku || null, stock: stock ?? 0, price: price != null && price !== p.price ? price : null, color_hex: /^#[0-9a-f]{6}$/i.test(r.color_hex || "") ? r.color_hex : null, ...(barcode ? { barcode } : {}) } });
         return;
       }
       // producto nuevo
@@ -194,10 +229,12 @@
           price, description: r.description || "", sku: r.variant ? null : (r.sku || null),
           width_cm: parseNumber(r.width), height_cm: parseNumber(r.height), depth_cm: parseNumber(r.depth),
           placement: catRow.placement, surface_use: catRow.placement === "surface" ? "both" : null,
+          ...(m2box != null && catRow.placement === "surface" ? { m2_per_box: m2box } : {}),
+          ...(cover != null ? { coverage_m2: cover } : {}),
         }, variants: [] };
         out.newProducts.set(key, np);
       }
-      if (r.variant || stock != null) np.variants.push({ name: r.variant || "Único", sku: r.sku || null, stock: stock ?? 0, price: price !== np.row.price ? price : null, color_hex: /^#[0-9a-f]{6}$/i.test(r.color_hex || "") ? r.color_hex : null });
+      if (r.variant || stock != null) np.variants.push({ name: r.variant || "Único", sku: r.sku || null, stock: stock ?? 0, price: price !== np.row.price ? price : null, color_hex: /^#[0-9a-f]{6}$/i.test(r.color_hex || "") ? r.color_hex : null, ...(barcode ? { barcode } : {}) });
     });
     return out;
   }
@@ -206,8 +243,9 @@
     const m = window.Lambert.money;
     const esc = window.Lambert.esc;
     const nNew = plan.newProducts.size;
+    const LABEL = { stock: "stock", barcode: "código", m2_per_box: "m²/caja", coverage_m2: "rinde" };
     const fmt = (u) => Object.entries(u.change).map(([k, val]) => k === "price"
-      ? `precio ${m.format(u.from.price)} → <b>${m.format(val)}</b>` : `stock ${u.from.stock} → <b>${val}</b>`).join(" · ");
+      ? `precio ${m.format(u.from.price)} → <b>${m.format(val)}</b>` : `${LABEL[k] || k} ${esc(u.from[k] ?? "—")} → <b>${esc(val)}</b>`).join(" · ");
     $("impPlan").innerHTML = `
       <div class="notice" style="margin:10px 0">
         <b>${plan.updates.length}</b> cambios de precio o stock · <b>${plan.creates.length}</b> colores nuevos ·
@@ -236,7 +274,7 @@
     const now = new Date().toISOString();
     // de a 8 en paralelo para no saturar
     const run = async (items, fn) => { for (let i = 0; i < items.length; i += 8) await Promise.all(items.slice(i, i + 8).map(async (x) => { try { await fn(x); } catch (e) { fails.push(`Fila ${x.line}: ${e.message}`); } tick(); })); };
-    const check = ({ error }) => { if (error) throw new Error(error.code === "23505" ? "ese SKU ya existe" : error.message); };
+    const check = ({ error }) => { if (error) throw new Error(error.code === "23505" ? (/barcode/.test(error.message) ? "ese código de barras ya es de otra variante" : "ese SKU ya existe") : error.message); };
 
     await run(plan.updates, async (u) => check(await db.from(u.kind === "variant" ? "product_variants" : "products").update({ ...u.change, updated_at: now }).eq("id", u.id)));
     await run(plan.creates, async (c) => check(await db.from("product_variants").insert({ product_id: c.productId, ...c.row })));

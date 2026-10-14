@@ -105,6 +105,9 @@
       `<rect x="${a - 0.25}" y="${y - 0.03}" width="0.5" height="0.025" rx="0.01" fill="${CHROME}"/>`) }),
     mat: ({ x0, x1, z0, z1, color }) => ({ k: -1, s: onTop(0.003, `<rect x="${x0}" y="${z0}" width="${x1 - x0}" height="${z1 - z0}" rx="0.04" fill="${color}"/>` +
       `<rect x="${x0 + 0.04}" y="${z0 + 0.04}" width="${x1 - x0 - 0.08}" height="${z1 - z0 - 0.08}" rx="0.03" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="0.01"/>`) }),
+    measure: ({ W, L }) => ({ k: -2, s: onTop(0.004,
+      `<path d="M0.15 ${L - 0.25}H${W - 0.15}M0.15 ${L - 0.32}V${L - 0.18}M${W - 0.15} ${L - 0.32}V${L - 0.18}` +
+      `M${W - 0.25} 0.15V${L - 0.45}M${W - 0.32} 0.15H${W - 0.18}M${W - 0.32} ${L - 0.45}H${W - 0.18}" stroke="#2563eb" stroke-width="0.025" fill="none" stroke-linecap="round"/>`) }),
     plant: ({ x, z }) => {
       let s = box(x - 0.1, x + 0.1, 0, 0.3, z - 0.1, z + 0.1, "#c98663");
       const [px, py] = P(x, 0.55, z);
@@ -170,6 +173,14 @@
         ["mat", { x0: 1.15, x1: 1.95, z0: 1.1, z1: 1.45, color: "#9aa4a0" }],
         ["glass", { x0: 1.8, z0: 1.75, x1: 1.8, z1: 2.65 }],
         ["tray", { x0: 1.8, x1: 2.5, z0: 1.75, z1: 3.0 }],
+      ] },
+    // "Empezar de cero": el baño vacío, con las medidas marcadas en el piso
+    vacio: { W: 1.8, L: 2.4, tint: "#ecebe8",
+      floor: { kind: "tile", size: 0.6, color: "#eceae6", grout: "#d6d2cb" },
+      wall: { color: "#f7f6f4", tile: [0.6, 1.2] },
+      accents: [],
+      items: [
+        ["measure", { W: 1.8, L: 2.4 }],
       ] },
   };
 

@@ -44,5 +44,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
 - 008 aplicada; la función está publicada como `swift-api`.
 - Cotización (`009`): cerámica en cajas completas, pegante y boquilla calculados, y cotización impresa con
   logo, datos de la tienda, vista 3D y planta, validez y notas. Pendiente: correr `009`.
+- Materiales de instalación por producto en un presupuesto adjunto, código de barras por variante e ingreso de
+  inventario con la cámara (`010`, `escaner.js`). Pendiente: correr `010`.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

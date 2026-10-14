@@ -40,6 +40,18 @@ o la de `store` en `config.js`.
 - **Mi empresa → Cotización impresa**: días de validez y notas al pie. "Imprimir" en el diseñador guarda el
   diseño (para que lleve código y QR) e imprime una cotización con logo, datos de la tienda, vista 3D y planta.
 
+## Materiales de instalación y código de barras (010)
+
+**SQL Editor** → pega `supabase/010-instalacion-y-codigos.sql` → **Run** (después de 009).
+- **🔧 Instalación** (admin): qué materiales lleva cada producto (por cada sanitario, lavamanos, mueble…) y qué
+  lleva el baño una vez (tubería, rejilla, cinta, silicona). El diseñador los suma en un **presupuesto adjunto**,
+  aparte de la cotización, con su propio total y el total con instalación (también en la cotización impresa y
+  en WhatsApp). Trae kits de muestra para Lambert.
+- **Código de barras** del proveedor en cada color o variante (único por tienda), con botón 📷 para escanearlo.
+- **📦 Ingresar inventario** (admin): escanea con la cámara del celular o un lector USB/Bluetooth, pon la
+  cantidad y "Ingresar al inventario" suma el stock y deja el registro. Un código que no está se asigna a su
+  producto una sola vez. Mismo lector que Miel: el del navegador, y en iPhone `barcode-detector` (zxing).
+
 ## En la tienda
 
 Abre `tienda.html` en la pantalla del local y toca **⛶ Pantalla completa**. Si nadie la usa, vuelve sola al inicio.

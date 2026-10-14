@@ -35,6 +35,8 @@
   <nav class="filters" id="tabs" hidden>
     <button class="chip active" type="button" data-tab="productos">Productos</button>
     <button class="chip" type="button" data-tab="disenos">Diseños guardados</button>
+    <button class="chip" type="button" data-tab="inventario">📦 Ingresar inventario</button>
+    <button class="chip" type="button" data-tab="instalacion">🔧 Instalación</button>
     <button class="chip" type="button" data-tab="tiendas" hidden>Tiendas</button>
   </nav>
 
@@ -91,6 +93,32 @@
     <div class="status" id="dStatus"></div>
     <div id="designs"></div>
     <button class="btn" type="button" id="dMore" hidden style="margin-top:8px">Ver más</button>
+  </section>
+
+  <!-- Ingresar inventario con el código de barras -->
+  <section id="stockPanel" class="panel" hidden>
+    <h2>Ingresar inventario</h2>
+    <p class="muted" style="margin:-4px 0 12px">Escanea con la cámara del celular (o un lector) el código de barras de cada producto que llegó,
+      pon la cantidad y dale <b>Ingresar al inventario</b>. Si un código no está, lo asignas a su producto una sola vez.</p>
+    <button class="btn btn-primary" type="button" id="scanBtn" style="width:100%;padding:14px;font-size:16px">📷 Escanear productos</button>
+    <div id="stockLines" style="margin-top:12px"></div>
+    <div id="stockFoot" hidden>
+      <div class="field" style="margin-top:10px"><label for="stockNote">Nota <span class="muted">(factura, proveedor)</span></label><input class="input" id="stockNote" maxlength="200"></div>
+      <div class="row" style="flex-wrap:wrap"><button class="btn btn-primary" type="button" id="stockApply">Ingresar al inventario</button>
+        <button class="btn" type="button" id="stockClear">Vaciar</button></div>
+    </div>
+    <div class="status" id="stockStatus"></div>
+    <div class="section">Últimos ingresos</div>
+    <div id="stockHistory" class="muted">—</div>
+  </section>
+
+  <!-- Materiales de instalación por producto -->
+  <section id="kitsPanel" class="panel" hidden>
+    <h2>Materiales de instalación</h2>
+    <p class="muted" style="margin:-4px 0 12px">Lo que necesita cada producto para instalarse (flexibles, llaves de paso, sifones, tornillos,
+      sellantes…). El diseñador los suma en un presupuesto aparte, adjunto a la cotización.</p>
+    <div class="status" id="kitsStatus"></div>
+    <div id="kits"></div>
   </section>
 
   <!-- Datos de la empresa -->
@@ -301,6 +329,7 @@
 <script src="lambert.js"></script>
 <script src="ilustraciones.js"></script>
 <script src="admin-importar.js"></script>
+<script src="escaner.js"></script>
 <script>
 const { C, db, configured, S, COUNTRIES, CURRENCIES, countryOf, useStore, renderBrand, phoneField, isoOfDial, phoneValue, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, compressImage, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
@@ -323,7 +352,7 @@ function fillCategorySelect() {
 fillCategorySelect();
 
 // "listPanel" = el panel principal, con sus pestañas
-const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"], empresa: ["companyPanel"], tiendas: ["storesPanel"] };
+const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"], inventario: ["stockPanel"], instalacion: ["kitsPanel"], empresa: ["companyPanel"], tiendas: ["storesPanel"] };
 let tab = "productos";
 function show(section) {
   const main = section === "listPanel";
@@ -396,6 +425,9 @@ async function enterStore(store) {
   renderStores();
   await refreshList();
   loadDesigns();
+  loadKits();
+  loadStockHistory();
+  stockLines = []; renderStock();
 }
 $("storeSel").addEventListener("change", (e) => { tab = "productos"; enterStore(stores.find((x) => x.id === e.target.value)); });
 
@@ -663,6 +695,9 @@ function variantCard(v = {}) {
       <div class="field" style="flex:1;min-width:120px"><label>Precio <span class="muted">(vacío = base)</span></label><input class="input v-price" type="number" min="0" step="any" value="${v.price ?? ""}"></div>
       <div class="field" style="width:100px"><label>Stock</label><input class="input v-stock" type="number" min="0" step="1" value="${v.stock ?? 0}"></div>
     </div>
+    ${has010() ? `<div class="field"><label>Código de barras <span class="muted">(del proveedor)</span></label>
+      <div class="row"><input class="input v-barcode" maxlength="64" inputmode="numeric" autocomplete="off" placeholder="ej: 7702004003508" value="${esc(v.barcode)}" style="flex:1">
+      <button class="btn v-scan" type="button" title="Escanear con la cámara">📷</button></div></div>` : ""}
     ${tile ? `<div class="field"><label>Foto de la pieza (textura)</label>
       <div class="row">${v.texture ? `<img src="${esc(v.texture)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px">` : ""}
       <input type="file" class="v-texture" accept="image/*" ${v.id ? "" : "disabled title='Guarda la variante primero'"}></div></div>` : ""}
@@ -701,6 +736,10 @@ $("variants").addEventListener("click", async (e) => {
     return;
   }
 
+  if (e.target.classList.contains("v-scan")) {
+    const sc = Escaner.open({ title: "Código de barras", onCode: (code) => { card.querySelector(".v-barcode").value = code; sc.close(); } });
+    return;
+  }
   if (e.target.classList.contains("v-save")) {
     const q = (c) => card.querySelector(c);
     const name = q(".v-name").value.trim();
@@ -716,6 +755,7 @@ $("variants").addEventListener("click", async (e) => {
       sku: q(".v-sku").value.trim() || null,
       price: priceRaw === "" ? null : Number(priceRaw),
       stock,
+      ...(has010() ? { barcode: q(".v-barcode").value.trim() || null } : {}),
       active: q(".v-active").checked,
       position: id ? current.variants.find((x) => x.id === id)?.position ?? 0 : current.variants.length,
       updated_at: new Date().toISOString(),
@@ -724,7 +764,11 @@ $("variants").addEventListener("click", async (e) => {
     const { data, error } = id
       ? await db.from("product_variants").update(row).eq("id", id).select().single()
       : await db.from("product_variants").insert(row).select().single();
-    if (error) { console.error(error); return st(error.code === "23505" ? "Ese SKU ya existe en otra variante." : "No se pudo guardar.", "err"); }
+    if (error) {
+      console.error(error);
+      return st(error.code === "23505" ? (/barcode/.test(error.message) ? "Ese código de barras ya es de otra variante." : "Ese SKU ya existe en otra variante.")
+        : error.code === "23514" && /barcode/.test(error.message) ? "El código de barras tiene caracteres no válidos." : "No se pudo guardar.", "err");
+    }
     const v = { ...data, finalPrice: data.price ?? current.price, texture: data.texture_path ? fileUrl(data.texture_path) : null };
     current.variants = id ? current.variants.map((x) => (x.id === id ? v : x)) : [...current.variants, v];
     const fresh = variantCard(v);
@@ -1046,6 +1090,181 @@ $("newStoreForm").addEventListener("submit", async (e) => {
   $("newStoreForm").hidden = true;
   status("newStoreStatus", "");
   $("storesList").insertAdjacentHTML("afterbegin", `<div class="notice" style="margin-bottom:10px">Tienda <b>${esc(data.store.name)}</b> creada ✓. El dueño entra a esta página con <b>${esc(body.email)}</b> y la contraseña que escribiste.</div>`);
+});
+
+// columnas de 010 (código de barras, instalación): se detectan por los datos que llegan
+const has010 = () => products.some((p) => p.variants.some((v) => "barcode" in v));
+
+// ── Ingresar inventario con el escáner ──
+let stockLines = [];   // [{ v, p, qty }]
+let scanner = null;
+const variantByCode = (code) => {
+  for (const p of products) for (const v of p.variants) if (v.barcode && v.barcode === code) return { p, v };
+  return null;
+};
+function addStockLine(p, v, qty = 1) {
+  const l = stockLines.find((x) => x.v.id === v.id);
+  if (l) l.qty += qty; else stockLines.unshift({ p, v, qty });
+  renderStock();
+}
+function stockLinesHtml() {
+  if (!stockLines.length) return `<p class="muted" style="text-align:center;padding:10px 0">Nada escaneado todavía.</p>`;
+  const units = stockLines.reduce((n, l) => n + l.qty, 0);
+  const value = stockLines.reduce((n, l) => n + l.qty * (l.v.finalPrice ?? l.p.price), 0);
+  return stockLines.map((l, i) => `<div class="stock-line">
+      <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(l.p.name)}</div>
+        <div class="muted">${esc(l.v.name)}${l.v.barcode ? " · " + esc(l.v.barcode) : ""} · stock ${l.v.stock} → <b>${l.v.stock + l.qty}</b></div></div>
+      <div class="qty"><button type="button" class="icon-btn" data-dec="${i}" aria-label="Uno menos">−</button>
+        <input class="input" type="number" min="1" step="1" inputmode="numeric" value="${l.qty}" data-qty="${i}" aria-label="Cantidad">
+        <button type="button" class="icon-btn" data-inc="${i}" aria-label="Uno más">+</button></div>
+      <button type="button" class="icon-btn" data-rm="${i}" aria-label="Quitar">✕</button></div>`).join("") +
+    `<div class="stock-total"><span>${stockLines.length} producto(s) · ${units} unidades</span><span>${money.format(value)}</span></div>`;
+}
+function renderStock() {
+  $("stockLines").innerHTML = stockLinesHtml();
+  $("stockFoot").hidden = !stockLines.length;
+  if (scanner) scanner.panel.querySelector(".scan-lines").innerHTML = stockLinesHtml();
+}
+function stockClick(e) {
+  const t = e.target;
+  const i = Number(t.dataset.dec ?? t.dataset.inc ?? t.dataset.rm);
+  if (Number.isNaN(i) || !stockLines[i]) return;
+  if (t.dataset.inc != null) stockLines[i].qty++;
+  if (t.dataset.dec != null) stockLines[i].qty = Math.max(1, stockLines[i].qty - 1);
+  if (t.dataset.rm != null) stockLines.splice(i, 1);
+  renderStock();
+}
+function stockInput(e) {
+  const i = Number(e.target.dataset.qty);
+  if (Number.isNaN(i) || !stockLines[i]) return;
+  const n = Math.round(Number(e.target.value));
+  if (n >= 1) { stockLines[i].qty = n; renderStock(); }
+}
+$("stockLines").addEventListener("click", stockClick);
+$("stockLines").addEventListener("change", stockInput);
+// código que no está: se asigna a una variante (una sola vez) y queda en la lista
+function unknownCode(code) {
+  const box = scanner?.panel.querySelector(".scan-msg");
+  if (!box) return;
+  box.innerHTML = `<div class="notice"><b>No hay un producto con el código ${esc(code)}.</b> ¿De cuál es?
+    <input class="input" id="assignQ" placeholder="Busca por nombre, color o referencia" autocomplete="off" style="margin-top:8px">
+    <div id="assignList" class="assign-list"></div></div>`;
+  const list = () => {
+    const q = $("assignQ").value.trim().toLowerCase();
+    const hits = [];
+    for (const p of products) for (const v of p.variants) {
+      if (v.barcode) continue;
+      const txt = `${p.name} ${v.name} ${v.sku || ""} ${p.sku || ""}`.toLowerCase();
+      if (!q || q.split(/\s+/).every((w) => txt.includes(w))) hits.push({ p, v });
+    }
+    $("assignList").innerHTML = hits.slice(0, 12).map(({ p, v }) => `<button type="button" class="assign-item" data-v="${v.id}">
+      <b>${esc(p.name)}</b> · ${esc(v.name)}${v.sku ? ` <span class="muted">${esc(v.sku)}</span>` : ""}</button>`).join("") || `<p class="muted">Sin resultados.</p>`;
+  };
+  $("assignQ").addEventListener("input", list);
+  list();
+  $("assignList").onclick = async (e) => {
+    const b = e.target.closest("[data-v]");
+    if (!b) return;
+    b.disabled = true;
+    const { error } = await db.from("product_variants").update({ barcode: code }).eq("id", b.dataset.v);
+    if (error) { console.error(error); b.disabled = false; return status("stockStatus", error.code === "23505" ? "Ese código ya es de otra variante." : "No se pudo asignar el código.", "err"); }
+    for (const p of products) for (const v of p.variants) if (v.id === b.dataset.v) { v.barcode = code; box.innerHTML = `<p class="ok-msg">✓ Código asignado a ${esc(p.name)} · ${esc(v.name)}</p>`; addStockLine(p, v); }
+  };
+}
+$("scanBtn").addEventListener("click", () => {
+  if (!has010()) return status("stockStatus", "Falta correr supabase/010-instalacion-y-codigos.sql en Supabase.", "err");
+  status("stockStatus", "");
+  scanner = Escaner.open({
+    title: "Ingresar inventario",
+    onClose: () => { scanner = null; },
+    below: `<div class="scan-msg"></div><div class="scan-lines"></div>`,
+    onCode: (code) => {
+      const hit = variantByCode(code);
+      const msg = scanner.panel.querySelector(".scan-msg");
+      if (!hit) return unknownCode(code);
+      msg.innerHTML = `<p class="ok-msg">+1 ${esc(hit.p.name)} · ${esc(hit.v.name)}</p>`;
+      addStockLine(hit.p, hit.v);
+    },
+  });
+  scanner.panel.addEventListener("click", stockClick);
+  scanner.panel.addEventListener("change", stockInput);
+  renderStock();
+});
+$("stockClear").addEventListener("click", () => { if (confirm("¿Vaciar la lista sin ingresar nada?")) { stockLines = []; renderStock(); } });
+$("stockApply").addEventListener("click", async () => {
+  if (!stockLines.length) return;
+  $("stockApply").disabled = true; status("stockStatus", "Ingresando…");
+  const items = stockLines.map((l) => ({ variant_id: l.v.id, qty: l.qty }));
+  const { error } = await db.rpc("add_stock", { p_store: C.storeId, p_items: items, p_note: $("stockNote").value.trim() });
+  $("stockApply").disabled = false;
+  if (error) { console.error(error); return status("stockStatus", /add_stock/.test(error.message) ? "Falta correr supabase/010-instalacion-y-codigos.sql." : "No se pudo ingresar. No se cambió nada.", "err"); }
+  const units = stockLines.reduce((n, l) => n + l.qty, 0);
+  stockLines.forEach((l) => { l.v.stock += l.qty; });
+  stockLines = []; $("stockNote").value = "";
+  renderStock(); renderList();
+  status("stockStatus", `✓ ${units} unidades ingresadas al inventario.`, "ok");
+  loadStockHistory();
+});
+async function loadStockHistory() {
+  const { data, error } = await db.from("stock_movements").select("qty, note, created_at, product_variants(name, products(name))")
+    .eq("store_id", C.storeId).order("created_at", { ascending: false }).limit(15);
+  if (error) { $("stockHistory").textContent = "—"; return; }
+  const when = new Intl.DateTimeFormat(C.locale, { dateStyle: "short", timeStyle: "short" });
+  $("stockHistory").innerHTML = data.length ? data.map((m) => `<div class="summary-line">${esc(when.format(new Date(m.created_at)))} · <b>+${m.qty}</b>
+    ${esc(m.product_variants?.products?.name ?? "")} · ${esc(m.product_variants?.name ?? "")}${m.note ? ` <span class="muted">(${esc(m.note)})</span>` : ""}</div>`).join("") : "Todavía no hay ingresos.";
+}
+
+// ── Materiales de instalación (kits) ──
+let kits = [];
+const kitTargets = () => [["_bano", "Una vez por baño", "tubería, rejilla de piso, cinta, sellantes…"],
+  ...CATEGORIES.filter((c) => c.placement === "floor" || c.placement === "wall").map((c) => [c.slug, `Por cada producto de ${c.label}`, ""])];
+const kitProducts = () => products.filter((p) => p.placement === "none" || p.category === "instalacion").sort((a, b) => a.name.localeCompare(b.name, "es"));
+async function loadKits() {
+  const { data, error } = await db.from("install_kits").select("*").eq("store_id", C.storeId).order("position");
+  if (error) { kits = null; status("kitsStatus", /install_kits/.test(error.message) ? "Falta correr supabase/010-instalacion-y-codigos.sql en Supabase." : "No se pudieron cargar.", "err"); }
+  else { kits = data; status("kitsStatus", ""); }
+  renderKits();
+}
+function renderKits() {
+  if (!kits) { $("kits").innerHTML = ""; return; }
+  const opts = kitProducts().map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  $("kits").innerHTML = kitTargets().map(([slug, title, hint]) => {
+    const rows = kits.filter((k) => k.applies_to === slug);
+    return `<details class="kit" ${rows.length ? "open" : ""}><summary><b>${esc(title)}</b> <span class="muted">${rows.length ? `· ${rows.length} material(es)` : hint ? "· " + esc(hint) : "· sin materiales"}</span></summary>
+      ${rows.map((k) => { const p = products.find((x) => x.id === k.product_id); return `<div class="kit-row">
+        <input class="input" type="number" min="0.1" step="0.5" value="${Number(k.qty)}" data-kq="${k.id}" aria-label="Cantidad" style="width:76px">
+        <span style="flex:1;min-width:0">${esc(p?.name ?? "(producto eliminado)")} <span class="muted">${p ? esc(unitLabel(p.unit)) : ""}</span></span>
+        <button type="button" class="icon-btn" data-kdel="${k.id}" aria-label="Quitar">✕</button></div>`; }).join("")}
+      <form class="kit-add" data-kadd="${slug}"><input class="input" type="number" min="0.1" step="0.5" value="1" name="qty" aria-label="Cantidad" style="width:76px">
+        <select class="input" name="product" aria-label="Material" style="flex:1;min-width:0">${opts}</select>
+        <button class="btn" type="submit">Agregar</button></form></details>`;
+  }).join("");
+}
+$("kits").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.closest("[data-kadd]");
+  if (!f) return;
+  const row = { store_id: C.storeId, applies_to: f.dataset.kadd, product_id: f.product.value, qty: Number(f.qty.value) || 1, position: kits.length + 1 };
+  const { data, error } = await db.from("install_kits").insert(row).select().single();
+  if (error) { console.error(error); return status("kitsStatus", "No se pudo agregar.", "err"); }
+  kits.push(data); renderKits();
+});
+$("kits").addEventListener("change", async (e) => {
+  const id = e.target.dataset.kq;
+  if (!id) return;
+  const qty = Number(e.target.value);
+  if (!(qty > 0)) return;
+  const { error } = await db.from("install_kits").update({ qty }).eq("id", id);
+  if (error) return status("kitsStatus", "No se pudo cambiar la cantidad.", "err");
+  kits.find((k) => k.id === id).qty = qty;
+  status("kitsStatus", "Guardado ✓", "ok");
+});
+$("kits").addEventListener("click", async (e) => {
+  const id = e.target.dataset.kdel;
+  if (!id) return;
+  const { error } = await db.from("install_kits").delete().eq("id", id);
+  if (error) return status("kitsStatus", "No se pudo quitar.", "err");
+  kits = kits.filter((k) => k.id !== id); renderKits();
 });
 
 LambertImport.init({ db, C, products: () => products, refresh: refreshList });

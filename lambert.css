@@ -134,3 +134,29 @@ textarea.input{min-height:80px;resize:vertical}
 .pass-field button:hover{color:var(--text-primary)}
 .logo-preview{width:140px;height:80px;border:1px dashed var(--border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:var(--surface-muted);overflow:hidden}
 .logo-preview img{max-width:100%;max-height:100%;object-fit:contain}
+
+/* Escáner de códigos de barras (escaner.js) */
+.scan-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.scan-box{background:var(--surface);width:100%;max-width:560px;max-height:94dvh;overflow-y:auto;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:14px;display:flex;flex-direction:column;gap:10px}
+@media (min-width:640px){.scan-overlay{align-items:center}.scan-box{border-radius:var(--radius-lg)}}
+.scan-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:16px}
+.scan-cam{position:relative;border-radius:var(--radius-md);overflow:hidden;background:#111}
+.scan-cam video{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.scan-cam::after{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:#ef4444;box-shadow:0 0 8px #ef4444;opacity:.8}
+.scan-hint{position:absolute;inset:auto 0 0;margin:0;padding:6px;text-align:center;font-size:12px;color:#fff;background:rgba(0,0,0,.45)}
+.scan-blocked{padding:24px 12px;color:#fff;text-align:center;font-size:14px}
+.scan-manual{display:flex;gap:6px}.scan-manual input{flex:1;min-width:0}
+.ok-msg{color:var(--positive);font-weight:500;margin:0}
+.stock-line{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.stock-line .qty{display:flex;align-items:center;gap:4px}
+.stock-line .qty input{width:64px;text-align:center;padding:6px}
+.stock-total{display:flex;justify-content:space-between;gap:8px;font-weight:600;padding:10px 0 2px}
+.assign-list{display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:240px;overflow-y:auto}
+.assign-item{text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);padding:8px;cursor:pointer;font-size:13px}
+.assign-item:hover{border-color:var(--text-tertiary)}
+/* Kits de instalación */
+.kit{border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;margin-bottom:8px}
+.kit summary{cursor:pointer;padding:4px 0}
+.kit-row,.kit-add{display:flex;align-items:center;gap:6px;padding:4px 0}
+.kit-add{margin-top:4px;border-top:1px dashed var(--border);padding-top:8px}
+.summary-line{padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary)}

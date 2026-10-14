@@ -18,6 +18,11 @@
   .tile b{font-size:19px;font-weight:600}
   .tile .muted{font-size:14px}
   .tile svg{width:100%;height:90px;margin-bottom:6px}
+  .tile.sample{padding:0;overflow:hidden;gap:2px;padding-bottom:16px}
+  .tile.sample b,.tile.sample .muted{padding:0 16px}
+  .tile.sample .art{display:block;width:100%;aspect-ratio:4/3;margin-bottom:10px;transition:transform .3s ease}
+  .tile.sample .art svg{display:block;width:100%;height:100%;margin:0;padding:10px 6px 4px}
+  .tile.sample:hover .art svg{transform:scale(1.04);transition:transform .3s ease}
   .tile.primary{background:var(--text-primary);color:var(--surface);border-color:var(--text-primary)}
   .tile.primary .muted{color:var(--text-quaternary)}
   .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:1100px;margin:22px auto 40px;padding:0 16px;width:100%}
@@ -51,6 +56,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="lambert.js"></script>
+<script src="muestras.js"></script>
 <script>
 const { C, configured, loadStore, renderBrand, esc } = Lambert;
 // la marca de la tienda: nombre y logo arriba, y el logo grande en la bienvenida
@@ -63,21 +69,16 @@ const { C, configured, loadStore, renderBrand, esc } = Lambert;
   if (C.logo) document.getElementById("heroLogo").innerHTML = `<img src="${esc(C.logo)}" alt="${esc(C.storeName)}">`;
 })();
 
-// mismas medidas que los baños de muestra de disenar.html; dibujo simple en planta
+// los mismos baños de muestra de disenar.html; la ilustración viene de muestras.js
 const T = [
-  { id: "medio", name: "Medio baño", note: "1,20 × 1,50 m · social, sin ducha", w: 1.2, l: 1.5, boxes: [[.42, -.58, .38, .34], [-.43, -.63, .55, .24]] },
-  { id: "pequeno", name: "Pequeño con ducha", note: "1,50 × 2,00 m", w: 1.5, l: 2.0, boxes: [[-.4, -.65, .38, .7], [-.53, .35, .45, .55], [.35, -.6, .8, .8]], glass: [[-.05, -.55, .02, .9]] },
-  { id: "estandar", name: "Estándar", note: "1,80 × 2,40 m", w: 1.8, l: 2.4, boxes: [[-.45, -.85, .38, .7], [-.67, .45, .46, .6], [.45, -.75, .8, .8]], glass: [[.45, -.28, .9, .02]] },
-  { id: "principal", name: "Principal con tina", note: "2,50 × 3,00 m", w: 2.5, l: 3.0, boxes: [[-1, .4, .48, 1], [-.75, -1.3, .36, .54], [.25, -1, 1.6, .75], [.9, .8, .7, 1.2]], glass: [[.53, .8, .02, .9]] },
+  { id: "medio", name: "Medio baño", note: "1,20 × 1,50 m · social, sin ducha" },
+  { id: "pequeno", name: "Pequeño con ducha", note: "1,50 × 2,00 m" },
+  { id: "estandar", name: "Estándar", note: "1,80 × 2,40 m" },
+  { id: "principal", name: "Principal con tina", note: "2,50 × 3,00 m" },
 ];
-const svg = (t) => {
-  const k = 80 / Math.max(t.w, t.l), W = t.w * k, L = t.l * k;
-  const r = (b, fill) => `<rect x="${b[0] * k - b[2] * k / 2}" y="${b[1] * k - b[3] * k / 2}" width="${b[2] * k}" height="${b[3] * k}" rx="1.5" fill="${fill}"/>`;
-  return `<svg viewBox="${-W / 2 - 4} ${-L / 2 - 4} ${W + 8} ${L + 8}" aria-hidden="true"><rect x="${-W / 2}" y="${-L / 2}" width="${W}" height="${L}" fill="#f4f1ea" stroke="#3a3a3a" stroke-width="3"/>
-    ${t.boxes.map((b) => r(b, "#c9b79c")).join("")}${(t.glass || []).map((b) => r(b, "#6fa7b5")).join("")}</svg>`;
-};
 document.getElementById("tpls").innerHTML = T.map((t) =>
-  `<a class="tile" href="disenar.html?plantilla=${t.id}&modo=tienda">${svg(t)}<b>${t.name}</b><span class="muted">${t.note}</span></a>`).join("");
+  `<a class="tile sample" href="disenar.html?plantilla=${t.id}&modo=tienda"><span class="art" style="background:${Muestras.tint(t.id)}">${Muestras.draw(t.id)}</span>
+    <b>${t.name}</b><span class="muted">${t.note}</span></a>`).join("");
 
 document.getElementById("codeForm").onsubmit = (e) => {
   e.preventDefault();

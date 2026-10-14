@@ -50,6 +50,8 @@
   .surf-sub button,.tile-types button{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-full);padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-secondary)}
   .surf-sub button.active,.tile-types button.active{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface)}
   .surf-now{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;font-size:13px;min-height:52px}
+  .surf-also{margin:-4px 0 10px}
+  .surf-also .btn{width:100%;font-size:13px;padding:7px}
   .surf-now img{width:36px;height:36px;border-radius:5px;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
   .surf-now .muted{font-size:12px}
   .surf-now button{margin-left:auto;flex-shrink:0;font-size:12px;padding:5px 10px}
@@ -172,13 +174,15 @@
           <button type="button" data-surf="front">Frente</button>
         </div>
         <div class="surf-now" id="surfNow"></div>
+        <div class="surf-also" id="surfAlso"></div>
         <div class="tile-types" id="tileTypes"></div>
         <div class="tile-grid" id="tileGrid"></div>
         <p class="muted">Se dibuja a escala real según el tamaño de la pieza. Solo aparecen colores con stock.</p>
       </section>
 
       <section class="pane" id="pane3">
-        <select class="input" id="cats" aria-label="Categoría" style="margin-bottom:8px"></select>
+        <select class="input" id="cats" aria-label="Categoría" style="margin-bottom:6px"></select>
+        <p class="muted" style="margin-bottom:8px">¿Cerámica o porcelanato? Está en <a href="#" id="toTiles">2 · Piso y paredes</a>.</p>
         <div class="prod-list" id="prods"></div>
         <p class="muted" style="margin-top:8px">Toca un producto para agregarlo. Luego arrástralo en el baño.</p>
         <h3>En tu baño <span class="muted" style="text-transform:none;letter-spacing:0">· cambia el color de cada uno</span></h3>
@@ -1080,6 +1084,9 @@ function renderTileSelects() {
     : p ? `<img src="${esc(tileImg(p, v))}" alt=""><span><b>${where}</b><br><span class="muted">${esc(p.name)} · ${esc(v?.name ?? "")}</span></span>
         <button class="btn" type="button" data-clear>${surf === "floor" || surf === "wall" ? "Quitar" : "Igual que las demás"}</button>`
     : `<span><b>${where}</b><br><span class="muted">Sin cerámica · elige una abajo</span></span>${surf !== "floor" && surf !== "wall" ? `<button class="btn" type="button" data-clear>Igual que las demás</button>` : ""}`;
+  // la misma cerámica en la otra superficie, de un toque
+  const also = p && p.surface_use === "both" && (surf === "floor" || surf === "wall") && selKey(surf === "floor" ? state.wall : state.floor) !== selKey(sel);
+  $("surfAlso").innerHTML = also ? `<button class="btn" type="button" data-also>${surf === "floor" ? "Usar también en las paredes" : "Usar también en el piso"}</button>` : "";
   // filtros por tipo y galería
   const tiles = tilesFor();
   const types = [...new Set(tiles.map((t) => t.subcategory || "Otras"))].sort((a, b) => a.localeCompare(b, "es"));
@@ -1100,6 +1107,14 @@ $("tileGrid").addEventListener("click", (e) => {
   if (!b) return;
   const [productId, variantId] = b.dataset.tile.split("|");
   setSel({ productId, variantId });
+});
+$("surfAlso").addEventListener("click", (e) => {
+  if (e.target.closest("[data-also]")) {
+    const sel = currentSel();
+    if (surf === "floor") state.wall = { ...sel }; else state.floor = { ...sel };
+    buildRoom(); updateWallVisibility(); persist(); renderSummary(); renderTileSelects();
+    flash(surf === "floor" ? "Listo, también en las paredes" : "Listo, también en el piso");
+  }
 });
 $("surfNow").addEventListener("click", (e) => {
   if (!e.target.closest("[data-clear]")) return;
@@ -1340,16 +1355,19 @@ async function init() {
     history.replaceState(null, "", withStore(`disenar.html${KIOSK ? "?modo=tienda" : ""}`));
     if (toAdd.placement === "surface") {
       const vid = qs.get("v") || toAdd.inStock[0]?.id;
-      const key = toAdd.surface_use === "wall" ? "wall" : "floor";
+      const key = toAdd.surface_use === "both" ? (qs.get("en") === "wall" ? "wall" : "floor") : toAdd.surface_use === "wall" ? "wall" : "floor";
       state[key] = { productId: toAdd.id, variantId: vid };
-      renderTileSelects(); buildRoom(); persist(); renderSummary();
+      surf = key;
+      renderTileSelects(); buildRoom(); updateWallVisibility(); persist(); renderSummary();
+      showStep(2);
+      flash(key === "floor" ? "Quedó en el piso. Toca «Paredes» para elegir la de las paredes." : "Quedó en las paredes. Toca «Piso» para elegir la del piso.");
     } else if (toAdd.placement !== "none") {
       cat = toAdd.category; renderProducts();
       await addProduct(toAdd, qs.get("v"));
     }
   }
   if (!state.items.length && !toAdd && !qs.get("d")) flash("Elige un baño de muestra o escribe tus medidas");
-  if (state.items.length) showStep(3);
+  if (state.items.length && toAdd?.placement !== "surface") showStep(3);
   // primer cuadro de inmediato (sin esperar al bucle de animación)
   controls.update(); updateWallVisibility(); renderer.render(scene, camera);
 }
@@ -1366,6 +1384,7 @@ function showStep(n) {
 }
 $("steps").addEventListener("click", (e) => { const b = e.target.closest("[data-step]"); if (b) showStep(Number(b.dataset.step)); });
 $("prevBtn").onclick = () => showStep(step - 1);
+$("toTiles").onclick = (e) => { e.preventDefault(); showStep(2); };
 $("nextBtn").onclick = () => showStep(step + 1);
 showStep(1);
 

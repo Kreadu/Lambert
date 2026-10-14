@@ -80,6 +80,15 @@ function renderFilters() {
   el.value = category;
 }
 
+// "Usar en mi diseño": la cerámica que sirve para piso y pared deja elegir dónde va
+function useButtons(p, variant) {
+  const base = `disenar.html?add=${p.id}${variant ? "&v=" + variant.id : ""}${new URLSearchParams(location.search).get("modo") === "tienda" ? "&modo=tienda" : ""}`;
+  const btn = (href, label, primary) => `<a class="btn ${primary ? "btn-primary" : ""}" style="text-decoration:none;flex:1" href="${href}">${label}</a>`;
+  const where = p.placement === "surface" && p.surface_use === "both"
+    ? btn(`${base}&en=floor`, "Usar en el piso", true) + btn(`${base}&en=wall`, "Usar en las paredes", true)
+    : btn(base, "Usar en mi diseño de baño", true);
+  return `<div class="row" id="useInDesign" style="margin-top:12px;flex-wrap:wrap" ${p.available ? "" : "hidden"}>${where}</div>`;
+}
 const swatchStyle = (hex) => `background:${/^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "transparent"}`;
 
 function render() {
@@ -159,8 +168,7 @@ function openProduct(id) {
             <span class="swatch" style="${swatchStyle(x.color_hex)};width:16px;height:16px"></span>${esc(x.name)}${out ? " · agotado" : ""}</button>`;
         }).join("")}</div>
         <p class="muted" style="margin-top:6px">${variant ? (variant.stock <= 5 ? `¡Quedan ${variant.stock}!` : "Disponible") : "Agotado en todos los colores"}</p>` : ""}
-      ${p.placement !== "none" ? `<a class="btn btn-primary" style="margin-top:12px;text-decoration:none;width:100%" id="useInDesign"
-        href="disenar.html?add=${p.id}${variant ? "&v=" + variant.id : ""}${new URLSearchParams(location.search).get("modo") === "tienda" ? "&modo=tienda" : ""}" ${p.available ? "" : "hidden"}>Usar en mi diseño de baño</a>` : ""}
+      ${p.placement !== "none" ? useButtons(p, variant) : ""}
       ${p.description ? `<p class="desc" style="margin-top:12px">${esc(p.description)}</p>` : ""}
       ${spec.length ? `<div class="section">Ficha técnica</div><table class="features">${spec.map(([k, val]) =>
         `<tr><td>${k}</td><td>${val}</td></tr>`).join("")}</table>` : ""}`;

@@ -740,7 +740,8 @@ function variantCard(v = {}) {
       <div class="row"><input class="input v-barcode" maxlength="64" inputmode="numeric" autocomplete="off" placeholder="ej: 7702004003508" value="${esc(v.barcode)}" style="flex:1">
       <button class="btn v-scan" type="button" title="Escanear con la cámara">📷</button></div></div>` : ""}
     ${tile ? `<div class="field"><label>Foto de la pieza (textura)</label>
-      <div class="row">${v.texture ? `<img src="${esc(v.texture)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px">` : ""}
+      <div class="row">${v.texture ? `<img src="${esc(v.texture)}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px">
+      <button class="btn v-untex" type="button" title="Quitar la textura de este color">Quitar</button>` : ""}
       <input type="file" class="v-texture" accept="image/*" ${v.id ? "" : "disabled title='Guarda la variante primero'"}></div></div>` : ""}
     <div class="row" style="flex-wrap:wrap">
       <label class="row" style="font-size:14px"><input type="checkbox" class="v-active" ${v.active === false ? "" : "checked"}> Activa</label>
@@ -774,6 +775,20 @@ $("variants").addEventListener("click", async (e) => {
     if (error) return st("No se pudo eliminar.", "err");
     current.variants = current.variants.filter((x) => x.id !== id);
     card.remove();
+    return;
+  }
+
+  if (e.target.classList.contains("v-untex")) {
+    if (!confirm("¿Quitar la textura de este color?")) return;
+    const old = current.variants.find((x) => x.id === id)?.texture_path;
+    const { data, error } = await db.from("product_variants").update({ texture_path: null }).eq("id", id).select().single();
+    if (error) return st("No se pudo quitar.", "err");
+    if (old) await db.storage.from(C.bucket).remove([old]);
+    const v = { ...data, finalPrice: data.price ?? current.price, texture: null };
+    current.variants = current.variants.map((x) => (x.id === id ? v : x));
+    const fresh = variantCard(v);
+    card.replaceWith(fresh);
+    const s = fresh.querySelector(".v-status"); s.textContent = "Textura quitada ✓"; s.className = "status v-status ok";
     return;
   }
 

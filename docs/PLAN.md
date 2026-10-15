@@ -43,7 +43,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   diseños. Teléfonos con código de país. "Nueva tienda" en admin.html para los administradores de la plataforma.
 - 008 aplicada; la función está publicada como `swift-api`.
 - Cotización (`009`): cerámica en cajas completas, pegante y boquilla calculados, y cotización impresa con
-  logo, datos de la tienda, vista 3D y planta, validez y notas. Pendiente: correr `009`.
+  logo, datos de la tienda, vista 3D y planta, validez y notas.
 - Materiales de instalación por producto en un presupuesto adjunto, código de barras por variante e ingreso de
   inventario con la cámara (`010`, `escaner.js`). El cliente edita los accesorios recomendados.
 - `index.html` es la página de inicio de Lambert (se quitó la plantilla de ropa); `tienda.html` la abre en modo kiosco.
@@ -51,10 +51,10 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   Excel con código de barras, m² por caja y rendimiento. Pruebas automáticas: `npm test` (16 pruebas).
 - `011` aplicada (2026-10-14).
 - Publicado en GitHub Pages (https, se actualiza con cada push): https://kreadu.github.io/Lambert/
-  Pendiente: agregar https://kreadu.github.io/Lambert/admin.html en Redirect URLs y Site URL de Supabase.
+  Redirect URLs y Site URL de Supabase apuntan ahí (2026-10-14).
 - Fotos de prueba (Wikimedia Commons, licencias libres) listas en `~/Escritorio/Lambert-fotos-prueba`
   (fuera del repo): 11 fotos nombradas por SKU para "Subir fotos en lote" y 2 texturas (mármol Carrara,
-  baldosa Floral azul) para subir en cada color; LEEME.txt y CREDITOS.txt. Falta que el usuario las suba.
+  baldosa Floral azul) para subir en cada color; LEEME.txt y CREDITOS.txt. Subidas (2026-10-14) salvo correcciones: textura de baldosa en Porcelanato liso/Blanco (quitar), textura Floral azul en Geométrico gris, y fotos de catálogo de CER-001/002/013.
   Vista previa del catálogo con fotos: se ve bien. Falta revisar el diseñador 3D con las texturas reales.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

@@ -102,3 +102,22 @@ test("estilos listos, luz de la tarde con ventana y la imagen HD en un equipo si
   await expect(page.locator("#photoLbl")).toContainText("Imagen HD lista", { timeout: 60_000 });
   await expect(page.locator("#photoSave")).toBeVisible();
 });
+
+test("baño en L con franja decorativa: piso, paredes del entrante y listelos en el resumen", async ({ page }) => {
+  test.setTimeout(420_000);
+  const ok = sinErrores(page);
+  await page.goto("/disenar.html");
+  await disenadorListo(page);
+  await page.evaluate(() => document.querySelectorAll("#templates .tpl")[2].click());
+  await page.evaluate(() => { const e = document.getElementById("shape"); e.value = "fr"; e.dispatchEvent(new Event("change")); });
+  await expect(page.locator(".notch-f").first()).toBeVisible();
+  await page.locator('#steps [data-step="2"]').click({ force: true, noWaitAfter: true });
+  await page.locator('#surfTabs [data-surf="wall"]').click({ force: true });
+  await expect(page.locator("#wallSides")).toContainText("Entrante 2");
+  await page.locator("#bandTab").click({ force: true });
+  await page.evaluate(() => document.querySelector("#tileGrid .tile-card").click());
+  await expect(page.locator("#bandY")).toBeVisible();
+  await page.locator('#steps [data-step="4"]').click({ force: true, noWaitAfter: true });
+  await expect(page.locator("#summary")).toContainText("Franja decorativa");
+  ok();
+});

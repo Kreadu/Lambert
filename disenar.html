@@ -46,8 +46,9 @@
   .dims label{font-size:12px;color:var(--text-tertiary)}
   .prod-list{display:flex;flex-direction:column;gap:4px}
   /* paso 2: galería de cerámicas */
-  .surf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--surface-muted);border-radius:var(--radius-md);margin-bottom:8px}
+  .surf-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:3px;background:var(--surface-muted);border-radius:var(--radius-md);margin-bottom:8px}
   .surf-tabs button{border:none;background:none;padding:8px;border-radius:calc(var(--radius-md) - 2px);cursor:pointer;font-weight:500;font-size:14px;color:var(--text-secondary)}
+  .surf-tabs button[hidden]{display:none}
   .surf-tabs button.active{background:var(--surface);color:var(--text-primary);box-shadow:var(--shadow-sm,0 1px 2px rgba(0,0,0,.08))}
   .surf-sub{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
   .surf-sub button{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-full);padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-secondary)}
@@ -123,6 +124,8 @@
   .sum-sec:first-child{margin-top:0}
   .install-box{margin-top:16px;padding:10px;border:1px dashed var(--border);border-radius:var(--radius-md);background:var(--surface-muted)}
   .install-box .sum-sec{margin-top:0}
+  .surf-now:has(.band-y){flex-wrap:wrap}
+  .band-y{display:flex;flex-direction:column;gap:2px;flex-basis:100%;font-size:13px}
   .plan-box{margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:14px}
   .plan-box summary{cursor:pointer}
   .plan-box ol{margin:8px 0 0;padding-left:20px}
@@ -234,6 +237,16 @@
           <div><label for="rl">Largo (m)</label><input class="input" id="rl" type="number" min="0.8" max="8" step="0.05" inputmode="decimal"></div>
           <div><label for="rh">Alto (m)</label><input class="input" id="rh" type="number" min="2" max="4" step="0.05" inputmode="decimal"></div>
         </div>
+        <div class="row" style="margin-top:10px;align-items:flex-end">
+          <div style="flex:2"><label class="muted" for="shape">Forma</label>
+            <select class="input" id="shape">
+              <option value="">Rectangular</option>
+              <option value="br">En L · sin la esquina fondo-derecha</option><option value="bl">En L · sin la esquina fondo-izquierda</option>
+              <option value="fr">En L · sin la esquina frente-derecha</option><option value="fl">En L · sin la esquina frente-izquierda</option>
+            </select></div>
+          <div style="flex:1" class="notch-f" hidden><label class="muted" for="nw">Entrante ancho</label><input class="input" id="nw" type="number" min="0.3" max="7" step="0.05" inputmode="decimal"></div>
+          <div style="flex:1" class="notch-f" hidden><label class="muted" for="nl">Entrante largo</label><input class="input" id="nl" type="number" min="0.3" max="7" step="0.05" inputmode="decimal"></div>
+        </div>
         <p class="muted" style="margin-top:6px">¿No trajiste las medidas? Elige el baño de muestra que más se parezca. En la vista <b>Planta</b> también puedes arrastrar las paredes.</p>
         <div id="stylesBox" hidden>
           <h3>Dale un estilo</h3>
@@ -255,14 +268,9 @@
         <div class="surf-tabs" id="surfTabs">
           <button type="button" data-surf="floor" class="active">Piso</button>
           <button type="button" data-surf="wall">Paredes</button>
+          <button type="button" data-surf="band" id="bandTab" hidden>Franja</button>
         </div>
-        <div class="surf-sub" id="wallSides" hidden>
-          <button type="button" data-surf="wall" class="active">Todas</button>
-          <button type="button" data-surf="back">Fondo</button>
-          <button type="button" data-surf="left">Izquierda</button>
-          <button type="button" data-surf="right">Derecha</button>
-          <button type="button" data-surf="front">Frente</button>
-        </div>
+        <div class="surf-sub" id="wallSides" hidden></div>
         <div class="surf-now" id="surfNow"></div>
         <div class="surf-also" id="surfAlso"></div>
         <select class="input" id="tileTypes" aria-label="Tipo de cerámica" style="margin-bottom:8px"></select>
@@ -381,6 +389,7 @@ import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { Reflector } from "three/addons/objects/Reflector.js";
 
 const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
@@ -442,6 +451,48 @@ const WALL_HEIGHT = { lavamanos: 0.8, griferia: 1.0, duchas: 2.05, espejos: 1.55
 const DOOR = { w: 0.8, h: 2.05 };
 // la propia de esa pared (o "sin cerámica" a propósito), o la general
 const wallTileOf = (side) => (state.walls?.[side] ? (state.walls[side].productId ? state.walls[side] : null) : state.wall);
+// ── Forma del baño: rectángulo o en L (le falta una esquina: el "entrante") ──
+const ORIENT = {
+  back: { rotY: 0, normal: [0, 0, 1], along: [1, 0, 0] },
+  front: { rotY: Math.PI, normal: [0, 0, -1], along: [-1, 0, 0] },
+  left: { rotY: Math.PI / 2, normal: [1, 0, 0], along: [0, 0, 1] },
+  right: { rotY: -Math.PI / 2, normal: [-1, 0, 0], along: [0, 0, -1] },
+};
+const NOTCH_MIN = 0.3, WALL_LEFT = 0.9; // el entrante mide al menos 30 cm y deja al menos 90 cm de pared (cabe la puerta)
+// corner: "br" | "bl" | "fr" | "fl" (b = fondo, f = frente, r = derecha, l = izquierda); w × l: lo que se recorta
+function notchOf(room = state.room) {
+  const n = room.notch;
+  if (!n || room.w - WALL_LEFT < NOTCH_MIN || room.l - WALL_LEFT < NOTCH_MIN) return null;
+  const nw = Math.min(Math.max(n.w, NOTCH_MIN), room.w - WALL_LEFT), nl = Math.min(Math.max(n.l, NOTCH_MIN), room.l - WALL_LEFT);
+  const sx = n.corner[1] === "r" ? 1 : -1, sz = n.corner[0] === "f" ? 1 : -1;
+  return { w: nw, l: nl, sx, sz, cx: sx * (room.w / 2 - nw), cz: sz * (room.l / 2 - nl) }; // (cx, cz): la esquina de adentro
+}
+// paredes: lado, largo, centro (x, z) y orientación. En L, las del rectángulo se acortan y aparecen las 2 del entrante
+function wallDefs(room = state.room) {
+  const { w, l } = room, n = notchOf(room);
+  const seg = (side, o, len, x, z) => ({ side, len, x, z, ...ORIENT[o] });
+  if (!n) return [seg("back", "back", w, 0, -l / 2), seg("front", "front", w, 0, l / 2), seg("left", "left", l, -w / 2, 0), seg("right", "right", l, w / 2, 0)];
+  const zs = n.sz < 0 ? "back" : "front", zo = n.sz < 0 ? "front" : "back";
+  const xs = n.sx > 0 ? "right" : "left", xo = n.sx > 0 ? "left" : "right";
+  const byZ = { [zs]: seg(zs, zs, w - n.w, -n.sx * n.w / 2, n.sz * l / 2), [zo]: seg(zo, zo, w, 0, -n.sz * l / 2) };
+  const byX = { [xs]: seg(xs, xs, l - n.l, n.sx * w / 2, -n.sz * n.l / 2), [xo]: seg(xo, xo, l, -n.sx * w / 2, 0) };
+  return [byZ.back, byZ.front, byX.left, byX.right,
+    seg("nx", zs, n.w, n.sx * (w / 2 - n.w / 2), n.cz), seg("nz", xs, n.l, n.cx, n.sz * (l / 2 - n.l / 2))];
+}
+// contorno del piso (x, z), en orden
+function floorPolygon(room = state.room) {
+  const { w, l } = room, n = notchOf(room);
+  const pts = [[-w / 2, -l / 2], [w / 2, -l / 2], [w / 2, l / 2], [-w / 2, l / 2]];
+  if (!n) return pts;
+  const i = pts.findIndex(([x, z]) => Math.sign(x) === n.sx && Math.sign(z) === n.sz);
+  const prev = pts[(i + 3) % 4], P = pts[i];
+  const onZ = [n.cx, P[1]], onX = [P[0], n.cz], inner = [n.cx, n.cz];
+  pts.splice(i, 1, ...(prev[1] === P[1] ? [onZ, inner, onX] : [onX, inner, onZ]));
+  return pts;
+}
+const floorArea = (room = state.room) => { const n = notchOf(room); return room.w * room.l - (n ? n.w * n.l : 0); };
+const wallArea = (d, h = state.room.h) => d.len * h - (d.side === state.room.doorWall ? DOOR.w * DOOR.h : 0);
+const SIDE_SHORT = { back: "Fondo", left: "Izquierda", right: "Derecha", front: "Frente", nx: "Entrante 1", nz: "Entrante 2" };
 const isBidetSpray = (p) => /higiénica/i.test(`${p.subcategory} ${p.name}`);
 const mountHeight = (p) => (isBidetSpray(p) ? 0.6 : WALL_HEIGHT[p.category] ?? 1.0);
 
@@ -456,6 +507,7 @@ const emptyState = () => ({
   walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
   supplies: true,                  // incluir pegante y boquilla en la cotización
+  band: null,                      // franja decorativa: { productId, variantId, y (altura del centro, m) }
   demo: false,                     // hay que retirar la cerámica vieja (suma una etapa al plan de obra)
   install: { qty: {}, off: [], extra: [] }, // accesorios de instalación: cantidades cambiadas, quitados y agregados por el cliente
   light: { mode: "dia", k: 1, window: false }, // hora del día, intensidad y ventana
@@ -596,6 +648,8 @@ function setQuality(q, why) {
 }
 // dibuja un cuadro: con efectos en calidad Alta, directo en Básica y en la planta
 function draw() {
+  const on = mirrorsOn();
+  for (const o of itemsGroup.children) if (o.userData.mirror) o.userData.mirror.visible = on;
   if (usePost()) { outline.selectedObjects = selected ? [selected] : []; composer.render(); }
   else renderer.render(scene, camera);
 }
@@ -849,6 +903,39 @@ function surfaceMaterial(sel, w, h, fallback) {
   });
 }
 
+// ── Franja decorativa (listelo): una tira de piezas acostadas que da la vuelta al baño ──
+const bandMeters = () => walls.reduce((n, wl) => n + bandSegments(wl).reduce((m, [a, b]) => m + b - a, 0), 0);
+const isDecor = (p) => p.placement === "surface" && p.unit !== "m2" && p.surface_use !== "floor";
+const bandProduct = () => (state.band?.productId && byId(state.band.productId)) || null;
+// alto de la tira y largo de cada pieza (la pieza va acostada: el lado largo a lo largo de la pared)
+function bandSize(p = bandProduct()) {
+  const a = (p?.tile_width_cm || 8) / 100, b = (p?.tile_height_cm || 60) / 100;
+  return { H: Math.min(a, b), len: Math.max(a, b) };
+}
+// tramos [desde, hasta] de la franja en una pared (medidos a lo largo, desde el centro), sin puerta ni ventana
+function bandSegments(wall) {
+  if (!bandProduct()) return [];
+  const { H } = bandSize(), y0 = state.band.y - H / 2, y1 = state.band.y + H / 2;
+  if (y1 > state.room.h) return []; // el techo quedó más bajo que la franja
+  let segs = [[-wall.len / 2, wall.len / 2]];
+  for (const [a, b, ha, hb] of wall.holes || []) {
+    if (ha >= y1 || hb <= y0) continue;
+    segs = segs.flatMap(([s, e]) => [[s, Math.min(e, a)], [Math.max(s, b), e]]).filter(([s, e]) => e - s > 0.02);
+  }
+  return segs;
+}
+function bandMaterial(L, H) {
+  const p = bandProduct();
+  const m = surfaceMaterial(state.band, L, H, "#ddd");
+  const tw = (p.tile_width_cm || 8) / 100, th = (p.tile_height_cm || 60) / 100;
+  for (const t of [m.map, m.bumpMap, m.roughnessMap]) {
+    t.center.set(0, 0);
+    if (th > tw) { t.rotation = Math.PI / 2; t.repeat.set(H / tw, L / th); } // pieza parada en la foto: se acuesta
+    else t.repeat.set(L / tw, H / th);
+  }
+  return m;
+}
+
 // ── Habitación ──
 function buildRoom() {
   texCache.forEach((t) => (t.userData.clones.length = 0));
@@ -859,19 +946,19 @@ function buildRoom() {
   lamp = new THREE.PointLight(0xffffff, CEILING_LAMP, 0, 2);
   lamp.position.set(0, h - 0.05, 0);
   roomGroup.add(lamp);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, l), surfaceMaterial(state.floor, w, l, "#e9e6e0"));
+  // piso con la forma del baño (rectángulo o L); la textura se reparte igual que en un rectángulo de w × l
+  const poly = floorPolygon();
+  const floorGeo = new THREE.ShapeGeometry(new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z))));
+  const fp = floorGeo.attributes.position, fuv = floorGeo.attributes.uv;
+  for (let i = 0; i < fp.count; i++) fuv.setXY(i, (fp.getX(i) + w / 2) / w, (fp.getY(i) + l / 2) / l);
+  const floor = new THREE.Mesh(floorGeo, surfaceMaterial(state.floor, w, l, "#e9e6e0"));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   floor.userData.isFloor = true;
   roomGroup.add(floor);
 
   // pared: centro, normal hacia adentro, eje "along" para moverse sobre ella
-  const defs = [
-    { side: "back", len: w, pos: [0, h / 2, -l / 2], rotY: 0, normal: [0, 0, 1], along: [1, 0, 0] },
-    { side: "front", len: w, pos: [0, h / 2, l / 2], rotY: Math.PI, normal: [0, 0, -1], along: [-1, 0, 0] },
-    { side: "left", len: l, pos: [-w / 2, h / 2, 0], rotY: Math.PI / 2, normal: [1, 0, 0], along: [0, 0, 1] },
-    { side: "right", len: l, pos: [w / 2, h / 2, 0], rotY: -Math.PI / 2, normal: [-1, 0, 0], along: [0, 0, -1] },
-  ];
+  const defs = wallDefs().map((d) => ({ ...d, pos: [d.x, h / 2, d.z] }));
   for (const d of defs) {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(d.len, h), surfaceMaterial(wallTileOf(d.side), d.len, h, "#f6f6f4"));
     mesh.position.set(...d.pos);
@@ -879,10 +966,11 @@ function buildRoom() {
     mesh.receiveShadow = true;
     mesh.userData.wall = d.side;
     roomGroup.add(mesh);
-    const wall = { ...d, mesh, normal: new THREE.Vector3(...d.normal), along: new THREE.Vector3(...d.along), extra: [] };
+    const wall = { ...d, mesh, normal: new THREE.Vector3(...d.normal), along: new THREE.Vector3(...d.along), extra: [], holes: [] };
     if (d.side === state.room.doorWall) {
       const door = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.w, DOOR.h), new THREE.MeshStandardMaterial({ color: "#9a7b5a", roughness: 0.7 }));
       const off = (state.room.doorPos - 0.5) * Math.max(0, d.len - DOOR.w - 0.1);
+      wall.holes.push([off - DOOR.w / 2, off + DOOR.w / 2, 0, DOOR.h]);
       door.position.copy(mesh.position).addScaledVector(wall.along, off).add(wall.normal.clone().multiplyScalar(0.005));
       door.position.y = DOOR.h / 2;
       door.rotation.y = d.rotY;
@@ -906,6 +994,18 @@ function buildRoom() {
       frame.position.copy(glass.position); frame.rotation.y = d.rotY;
       roomGroup.add(glass, frame);
       wall.extra.push(glass, frame);
+      wall.holes.push([-ww / 2 - 0.04, ww / 2 + 0.04, wy - wh / 2 - 0.04, wy + wh / 2 + 0.04]);
+    }
+    // franja decorativa (listelo): a la altura elegida, cortada donde están la puerta y la ventana
+    for (const [a, b] of bandSegments(wall)) {
+      const { H } = bandSize(), mid = (a + b) / 2;
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(b - a, H), bandMaterial(b - a, H));
+      strip.position.copy(mesh.position).addScaledVector(wall.along, mid).add(wall.normal.clone().multiplyScalar(0.003));
+      strip.position.y = state.band.y;
+      strip.rotation.y = d.rotY;
+      strip.receiveShadow = true;
+      roomGroup.add(strip);
+      wall.extra.push(strip);
     }
     // zócalo de contorno para que se lea la esquina
     const edge = new THREE.Mesh(new THREE.BoxGeometry(d.len, 0.01, 0.01), new THREE.MeshBasicMaterial({ color: "#b9b4ab" }));
@@ -916,13 +1016,22 @@ function buildRoom() {
     walls.push(wall);
   }
   // contorno para la vista de planta (paredes de 10 cm vistas desde arriba)
-  const t = 0.1, outline = new THREE.MeshBasicMaterial({ color: "#3a3a3a" });
-  for (const [x, z, sx, sz] of [[0, -l / 2 - t / 2, w + 2 * t, t], [0, l / 2 + t / 2, w + 2 * t, t], [-w / 2 - t / 2, 0, t, l], [w / 2 + t / 2, 0, t, l]]) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.02, sz), outline);
-    m.position.set(x, state.room.h + 0.05, z);
-    m.userData.planOnly = true;
-    roomGroup.add(m);
-  }
+  // el contorno del piso, corrido 10 cm hacia afuera en cada vértice (sirve para el rectángulo y para la L)
+  const t = 0.1, outline = new THREE.MeshBasicMaterial({ color: "#3a3a3a", side: THREE.DoubleSide });
+  const area2 = poly.reduce((s, [x, z], i) => { const [x2, z2] = poly[(i + 1) % poly.length]; return s + x * z2 - x2 * z; }, 0);
+  const outN = (a, b) => { const ex = b[0] - a[0], ez = b[1] - a[1], k = Math.hypot(ex, ez) * Math.sign(area2); return [ez / k, -ex / k]; };
+  const outer = poly.map((v, i) => {
+    const p = poly[(i + poly.length - 1) % poly.length], q = poly[(i + 1) % poly.length];
+    const [ax, az] = outN(p, v), [bx, bz] = outN(v, q);
+    return [v[0] + t * (ax + bx), v[1] + t * (az + bz)];
+  });
+  const ring = new THREE.Shape(outer.map(([x, z]) => new THREE.Vector2(x, -z)));
+  ring.holes.push(new THREE.Path(poly.map(([x, z]) => new THREE.Vector2(x, -z))));
+  const ringMesh = new THREE.Mesh(new THREE.ShapeGeometry(ring), outline);
+  ringMesh.rotation.x = -Math.PI / 2;
+  ringMesh.position.y = state.room.h + 0.05;
+  ringMesh.userData.planOnly = true;
+  roomGroup.add(ringMesh);
   const dw = walls.find((x) => x.side === state.room.doorWall);
   if (dw) { // hueco y barrido de la puerta en planta
     const door = dw.extra[0];
@@ -1012,6 +1121,7 @@ function proxy(p, color) {
       add(shape, mat(color, { roughness: 0.4 }), 0, h / 2, 0);
       const glass = shape.clone().scale(0.92, 0.92, 1.05);
       add(glass, mat("#dfe7ea", { metalness: 0.85, roughness: 0.04, envMapIntensity: 1.4 }), 0, h / 2, 0.002);
+      addMirror(g, sub.includes("redondo") || /redondo/i.test(p.name), w * 0.9, h * 0.9, h / 2, d / 2 * 1.05 + 0.004);
       break;
     }
     case "duchas": {
@@ -1046,6 +1156,30 @@ function proxy(p, color) {
   return g;
 }
 
+// espejo de verdad: refleja el baño (en calidad Alta, en 3D). En Básica, en la planta y en la foto realista
+// queda el vidrio metálico de abajo, que refleja el ambiente
+const mirrorsOn = () => quality === "alta" && !planMode && !photoOn;
+function addMirror(group, round, w, h, y, z) {
+  const geo = round ? new THREE.CircleGeometry(w / 2, 48) : new THREE.PlaneGeometry(w, h);
+  const size = Math.min(1024, Math.round(512 * renderer.getPixelRatio()));
+  const m = new Reflector(geo, { textureWidth: size, textureHeight: Math.round(size * h / w), clipBias: 0.003, color: 0xc4cbcd });
+  m.position.set(0, y, z);
+  m.visible = mirrorsOn();
+  m.raycast = () => {}; // se toca el espejo de abajo
+  const reflect = m.onBeforeRender;
+  m.onBeforeRender = function (r, sc, cam, ...rest) {
+    if (sc.overrideMaterial) return; // pasadas de sombra de contacto y contorno: no hace falta reflejar
+    // la vista "casa de muñecas" esconde las paredes del frente, pero el espejo sí las ve
+    const hidden = [];
+    for (const wl of walls) if (!wl.mesh.visible) for (const o of [wl.mesh, ...wl.extra]) { o.visible = true; hidden.push(o); }
+    for (const o of itemsGroup.children) if (!o.visible) { o.visible = true; hidden.push(o); }
+    reflect.call(this, r, sc, cam, ...rest);
+    hidden.forEach((o) => (o.visible = false));
+  };
+  group.userData.mirror = m;
+  group.add(m);
+}
+
 async function buildItem(item) {
   const p = byId(item.productId);
   if (!p) return null;
@@ -1071,6 +1205,7 @@ async function buildItem(item) {
       });
       obj = new THREE.Group();
       obj.add(src);
+      if (p.category === "espejos") addMirror(obj, /redondo/i.test(`${p.subcategory} ${p.name}`), dimsOf(p)[0] * 0.9, dimsOf(p)[1] * 0.9, dimsOf(p)[1] / 2, dimsOf(p)[2] / 2 + 0.004);
     } catch { obj = proxy(p, color); }
   } else obj = proxy(p, color);
   obj.add(planOutline(p));
@@ -1115,6 +1250,11 @@ function placeObject(obj) {
     const ex = (rotated ? d : w) / 2, ez = (rotated ? w : d) / 2;
     it.x = THREE.MathUtils.clamp(it.x, -state.room.w / 2 + ex, state.room.w / 2 - ex);
     it.z = THREE.MathUtils.clamp(it.z, -state.room.l / 2 + ez, state.room.l / 2 - ez);
+    const n = notchOf();
+    if (n) { // en L: si pisa el entrante, sale por el lado que menos tiene que moverse
+      const dx = n.sx * (it.x - n.cx) + ex, dz = n.sz * (it.z - n.cz) + ez;
+      if (dx > 0 && dz > 0) { if (dx < dz) it.x -= n.sx * dx; else it.z -= n.sz * dz; }
+    }
     obj.position.set(it.x, 0, it.z);
     obj.rotation.set(0, it.rot, 0);
   }
@@ -1189,7 +1329,12 @@ const WALL_GRAB = 0.15; // metros alrededor de la línea de la pared
 function wallAt() {
   const p = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
   if (!p) return null;
-  const { w, l } = state.room;
+  const { w, l } = state.room, n = notchOf();
+  if (n) { // las paredes del entrante cambian su medida
+    const inX = n.sx * (p.x - n.cx) > -WALL_GRAB, inZ = n.sz * (p.z - n.cz) > -WALL_GRAB;
+    if (Math.abs(p.x - n.cx) < WALL_GRAB && inZ) return "nz";
+    if (Math.abs(p.z - n.cz) < WALL_GRAB && inX) return "nx";
+  }
   if (Math.abs(Math.abs(p.x) - w / 2) < WALL_GRAB && Math.abs(p.z) < l / 2 + WALL_GRAB) return "x";
   if (Math.abs(Math.abs(p.z) - l / 2) < WALL_GRAB && Math.abs(p.x) < w / 2 + WALL_GRAB) return "z";
   return null;
@@ -1221,13 +1366,21 @@ renderer.domElement.addEventListener("pointermove", (e) => {
       // la habitación está centrada: la pared que se arrastra y la opuesta se mueven igual (medida = 2 × distancia)
       const p = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
       if (!p) return;
+      const n = notchOf(), notch = state.room.notch;
+      if (n && (wallDrag === "nx" || wallDrag === "nz")) { // el entrante: su pared interior se mueve sola
+        const key = wallDrag === "nz" ? "w" : "l";
+        const raw = wallDrag === "nz" ? state.room.w / 2 - n.sx * p.x : state.room.l / 2 - n.sz * p.z;
+        const v = Math.round(THREE.MathUtils.clamp(raw, NOTCH_MIN, state.room[key] - WALL_LEFT) * 20) / 20;
+        if (v !== notch[key]) { notch[key] = v; renderRoomForm(); buildRoom(); itemsGroup.children.forEach(placeObject); }
+        return;
+      }
       const key = wallDrag === "x" ? "w" : "l";
       const v = Math.round(THREE.MathUtils.clamp(Math.abs(wallDrag === "x" ? p.x : p.z) * 2, 0.8, 8) * 20) / 20; // cada 5 cm
       if (v !== state.room[key]) { state.room[key] = v; state.room.preset = null; renderRoomForm(); buildRoom(); itemsGroup.children.forEach(placeObject); }
       return;
     }
     const over = !hitItem() && wallAt();
-    stage.classList.toggle("resize-x", over === "x"); stage.classList.toggle("resize-z", over === "z");
+    stage.classList.toggle("resize-x", over === "x" || over === "nz"); stage.classList.toggle("resize-z", over === "z" || over === "nx");
     return;
   }
   if (!drag) return;
@@ -1267,7 +1420,7 @@ function renderSelection() {
       <div style="min-width:0"><div style="font-weight:600">${esc(p.name)}</div>
         <div class="muted">${esc(v?.name || "")} · ${money.format(v?.finalPrice ?? p.price)}</div></div>
       <div class="row">
-        ${it.wall ? `<select class="input" id="selWall" style="width:auto">${walls.map((w) => `<option value="${w.side}" ${w.side === it.wall ? "selected" : ""}>${{ back: "Fondo", front: "Frente", left: "Izquierda", right: "Derecha" }[w.side]}</option>`).join("")}</select>`
+        ${it.wall ? `<select class="input" id="selWall" style="width:auto">${walls.map((w) => `<option value="${w.side}" ${w.side === it.wall ? "selected" : ""}>${SIDE_SHORT[w.side]}</option>`).join("")}</select>`
           : `<button class="icon-btn" id="selRot" title="Girar 90°" aria-label="Girar 90°">⟳</button>`}
         <button class="icon-btn" id="selDel" title="Quitar" aria-label="Quitar del diseño">🗑</button>
       </div>
@@ -1325,8 +1478,15 @@ function renderRoomForm() {
     ${window.Muestras?.draw(t.id) ? `<span class="art" style="background:${Muestras.tint(t.id)}">${Muestras.draw(t.id)}</span>` : planThumb(t)}<b>${t.name}</b><span class="muted">${t.note}</span></button>`).join("");
   $("rw").value = state.room.w; $("rl").value = state.room.l; $("rh").value = state.room.h;
   $("doorWall").value = state.room.doorWall; $("doorPos").value = state.room.doorPos;
+  const n = notchOf();
+  $("shape").value = n ? state.room.notch.corner : "";
+  document.querySelectorAll(".notch-f").forEach((el) => (el.hidden = !n));
+  if (n) { $("nw").value = n.w; $("nl").value = n.l; }
 }
 function roomChanged() {
+  // lo que estaba en una pared del entrante pasa al fondo si el baño deja de ser en L
+  const sides = wallDefs().map((d) => d.side);
+  for (const it of state.items) if (it.wall && !sides.includes(it.wall)) { it.wall = "back"; it.x = 0; }
   buildRoom();
   itemsGroup.children.forEach(placeObject);
   updateSelectionBox();
@@ -1346,6 +1506,7 @@ async function applyTemplate(id) {
   const t = TEMPLATES.find((x) => x.id === id);
   if (state.items.length && !confirm("¿Cambiar al baño de muestra? Se reemplaza lo que tienes.")) return;
   if (t.room) Object.assign(state.room, t.room);
+  state.room.notch = t.room?.notch || null;
   state.room.preset = t.id;
   state.items = [];
   for (const spec of t.items(state.room)) {
@@ -1443,47 +1604,66 @@ for (const id of ["rw", "rl", "rh"]) $(id).addEventListener("change", () => {
   renderRoomForm(); roomChanged();
 });
 $("doorWall").addEventListener("change", (e) => { state.room.doorWall = e.target.value; roomChanged(); });
+$("shape").addEventListener("change", (e) => {
+  const { w, l } = state.room, r = (x) => Math.round(x * 20) / 20;
+  state.room.notch = e.target.value ? { corner: e.target.value, w: state.room.notch?.w ?? r(w * 0.4), l: state.room.notch?.l ?? r(l * 0.4) } : null;
+  if (e.target.value && !notchOf()) { state.room.notch = null; flash("El baño es muy chico para hacerlo en L"); }
+  state.room.preset = null;
+  renderRoomForm(); roomChanged();
+});
+for (const id of ["nw", "nl"]) $(id).addEventListener("change", () => {
+  if (!state.room.notch) return;
+  state.room.notch[id === "nw" ? "w" : "l"] = Number($(id).value) || NOTCH_MIN;
+  const n = notchOf(); Object.assign(state.room.notch, { w: n.w, l: n.l }); // lo que cabe
+  renderRoomForm(); roomChanged();
+});
 $("doorPos").addEventListener("input", (e) => { state.room.doorPos = Number(e.target.value); buildRoom(); updateWallVisibility(); persist(); });
 
 // ── Paso 2: galería de cerámicas (piso, todas las paredes o una pared) ──
-const SIDE_LABEL = { back: "Pared del fondo", left: "Pared izquierda", right: "Pared derecha", front: "Pared del frente" };
+const SIDE_LABEL = { back: "Pared del fondo", left: "Pared izquierda", right: "Pared derecha", front: "Pared del frente", nx: "Pared del entrante 1", nz: "Pared del entrante 2" };
 let surf = "floor";        // floor | wall | back | left | right | front
 let tileType = "all";      // filtro por subcategoría (Porcelanato, Mosaico…)
 const selKey = (sel) => (sel ? `${sel.productId}|${sel.variantId}` : "");
 const tileImg = (p, v) => v?.texture || p.photos[0] || illustrate(p, v);
 const usesFloor = () => surf === "floor";
-const tilesFor = () => products.filter((p) => p.placement === "surface" && p.unit === "m2" && p.available &&
-  (p.surface_use === "both" || p.surface_use === (usesFloor() ? "floor" : "wall")));
+const isMainSurf = () => surf === "floor" || surf === "wall" || surf === "band"; // no es una pared suelta
+const tilesFor = () => (surf === "band" ? products.filter((p) => isDecor(p) && p.available)
+  : products.filter((p) => p.placement === "surface" && p.unit === "m2" && p.available && (p.surface_use === "both" || p.surface_use === (usesFloor() ? "floor" : "wall"))));
 // lo elegido en la superficie actual: { productId, variantId } · null = sin cerámica · undefined = igual que las paredes
 function currentSel() {
   if (surf === "floor") return state.floor;
   if (surf === "wall") return state.wall;
+  if (surf === "band") return bandProduct() ? state.band : null;
   return state.walls[surf] ? (state.walls[surf].productId ? state.walls[surf] : null) : undefined;
 }
 function setSel(sel) {
   if (surf === "floor") state.floor = sel;
   else if (surf === "wall") state.wall = sel;
+  else if (surf === "band") state.band = sel ? { ...sel, y: state.band?.y ?? 1.2 } : null;
   else if (sel === undefined) delete state.walls[surf];
   else state.walls[surf] = sel || { productId: null };
   buildRoom(); updateWallVisibility(); persist(); renderSummary(); renderTileSelects();
 }
 function renderTileSelects() {
   state.walls ||= {};
-  document.querySelectorAll("#surfTabs [data-surf]").forEach((b) => b.classList.toggle("active", b.dataset.surf === (usesFloor() ? "floor" : "wall")));
-  $("wallSides").hidden = usesFloor();
-  document.querySelectorAll("#wallSides [data-surf]").forEach((b) => {
-    b.classList.toggle("active", b.dataset.surf === surf);
-    b.textContent = b.textContent.replace(/ •$/, "") + (state.walls[b.dataset.surf] ? " •" : ""); // • = tiene su propia cerámica
-  });
+  const sides = wallDefs().map((d) => d.side);
+  if (!isMainSurf() && !sides.includes(surf)) surf = "wall"; // la pared del entrante ya no existe
+  $("bandTab").hidden = !products.some((p) => isDecor(p) && p.available);
+  document.querySelectorAll("#surfTabs [data-surf]").forEach((b) => b.classList.toggle("active", b.dataset.surf === (surf === "floor" || surf === "band" ? surf : "wall")));
+  $("wallSides").hidden = surf === "floor" || surf === "band";
+  // • = tiene su propia cerámica
+  $("wallSides").innerHTML = ["wall", ...sides].map((k) => `<button type="button" data-surf="${k}" class="${k === surf ? "active" : ""}">${k === "wall" ? "Todas" : SIDE_SHORT[k] + (state.walls[k] ? " •" : "")}</button>`).join("");
   // lo que tiene ahora esta superficie
   const sel = currentSel();
-  const where = surf === "floor" ? "Piso" : surf === "wall" ? "Todas las paredes" : SIDE_LABEL[surf];
+  const where = surf === "floor" ? "Piso" : surf === "wall" ? "Todas las paredes" : surf === "band" ? "Franja decorativa" : SIDE_LABEL[surf];
   const p = sel && byId(sel.productId), v = p && variantOf(p, sel.variantId);
   $("surfNow").innerHTML = sel === undefined
     ? `<span><b>${where}</b><br><span class="muted">Igual que las demás paredes</span></span>`
     : p ? `<img src="${esc(tileImg(p, v))}" alt=""><span><b>${where}</b><br><span class="muted">${esc(p.name)} · ${esc(v?.name ?? "")}</span></span>
-        <button class="btn" type="button" data-clear>${surf === "floor" || surf === "wall" ? "Quitar" : "Igual que las demás"}</button>`
-    : `<span><b>${where}</b><br><span class="muted">Sin cerámica · elige una abajo</span></span>${surf !== "floor" && surf !== "wall" ? `<button class="btn" type="button" data-clear>Igual que las demás</button>` : ""}`;
+        <button class="btn" type="button" data-clear>${isMainSurf() ? "Quitar" : "Igual que las demás"}</button>` +
+      (surf === "band" ? `<label class="band-y"><span class="muted">Altura: <b id="bandYv">${esc(fmtM(state.band.y))}</b></span>
+        <input type="range" id="bandY" min="0.3" max="${state.room.h - 0.1}" step="0.05" value="${state.band.y}" aria-label="Altura de la franja"></label>` : "")
+    : `<span><b>${where}</b><br><span class="muted">${surf === "band" ? "Sin franja · elige un listelo abajo" : "Sin cerámica · elige una abajo"}</span></span>${!isMainSurf() ? `<button class="btn" type="button" data-clear>Igual que las demás</button>` : ""}`;
   // la misma cerámica en la otra superficie, de un toque
   const also = p && p.surface_use === "both" && (surf === "floor" || surf === "wall") && selKey(surf === "floor" ? state.wall : state.floor) !== selKey(sel);
   $("surfAlso").innerHTML = also ? `<button class="btn" type="button" data-also>${surf === "floor" ? "Usar también en las paredes" : "Usar también en el piso"}</button>` : "";
@@ -1500,8 +1680,8 @@ function renderTileSelects() {
   const shown = tiles.filter((t) => tileType === "all" || (t.subcategory || "Otras") === tileType);
   $("tileGrid").innerHTML = shown.flatMap((t) => t.inStock.map((vv) => `<button type="button" class="tile-card ${sel && sel.productId === t.id && sel.variantId === vv.id ? "active" : ""}"
       data-tile="${t.id}|${vv.id}" title="${esc(`${t.name} · ${vv.name}`)}"><img src="${esc(tileImg(t, vv))}" alt="" loading="lazy">
-      <span class="tn">${esc(vv.name)}</span><span class="muted">${esc(t.name)}</span><span class="tp">${money.format(vv.finalPrice)}/m²</span></button>`)).join("")
-    || `<p class="muted">No hay cerámica con stock para ${usesFloor() ? "piso" : "pared"}.</p>`;
+      <span class="tn">${esc(vv.name)}</span><span class="muted">${esc(t.name)}</span><span class="tp">${money.format(vv.finalPrice)}/${t.unit === "m2" ? "m²" : esc(unitLabel(t.unit))}</span></button>`)).join("")
+    || `<p class="muted">No hay ${surf === "band" ? "listelos" : "cerámica"} con stock para ${usesFloor() ? "piso" : "pared"}.</p>`;
 }
 $("surfTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-surf]"); if (b) { surf = b.dataset.surf; renderTileSelects(); } });
 $("wallSides").addEventListener("click", (e) => { const b = e.target.closest("[data-surf]"); if (b) { surf = b.dataset.surf; renderTileSelects(); } });
@@ -1522,8 +1702,16 @@ $("surfAlso").addEventListener("click", (e) => {
 });
 $("surfNow").addEventListener("click", (e) => {
   if (!e.target.closest("[data-clear]")) return;
-  setSel(surf === "floor" || surf === "wall" ? null : undefined);
+  setSel(isMainSurf() ? null : undefined);
 });
+// altura de la franja: se ve al mover; se guarda al soltar
+$("surfNow").addEventListener("input", (e) => {
+  if (e.target.id !== "bandY") return;
+  state.band.y = Number(e.target.value);
+  $("bandYv").textContent = fmtM(state.band.y);
+  buildRoom(); updateWallVisibility();
+});
+$("surfNow").addEventListener("change", (e) => { if (e.target.id === "bandY") { persist(); renderSummary(); } });
 
 let cat = "sanitarios";
 function renderProducts() {
@@ -1671,19 +1859,30 @@ function buildQuote() {
     const gr = supplyOf("grout");
     if (gr) { const gv = nearestVariant(gr, v?.color_hex); const g = grout.get(gv?.id) || { p: gr, v: gv, m2: 0 }; g.m2 += area; grout.set(gv?.id, g); }
   };
-  tileLine(state.floor, w * l, "Piso");
-  const NAMES = { back: "fondo", front: "frente", left: "izquierda", right: "derecha" };
+  tileLine(state.floor, floorArea(), "Piso");
+  const defs = wallDefs();
   const byTile = new Map();          // misma cerámica en varias paredes = una sola línea
-  for (const side of ["back", "left", "right", "front"]) {
-    const sel = wallTileOf(side);
+  for (const d of defs) {
+    const sel = wallTileOf(d.side);
     if (!sel) continue;
-    const area = (side === "back" || side === "front" ? w : l) * h - (side === state.room.doorWall ? DOOR.w * DOOR.h : 0);
     const k = selKey(sel);
     const g = byTile.get(k) || { sel, area: 0, sides: [] };
-    g.area += area; g.sides.push(NAMES[side]);
+    g.area += wallArea(d, h); g.sides.push(SIDE_SHORT[d.side].toLowerCase());
     byTile.set(k, g);
   }
-  for (const g of byTile.values()) tileLine(g.sel, g.area, g.sides.length === 4 ? "Paredes" : `Pared${g.sides.length > 1 ? "es" : ""} ${g.sides.join(", ")}`);
+  for (const g of byTile.values()) tileLine(g.sel, g.area, g.sides.length === defs.length ? "Paredes" : `Pared${g.sides.length > 1 ? "es" : ""} ${g.sides.join(", ")}`);
+  // franja decorativa: metros lineales sin puerta ni ventana; piezas completas con 10 % de más
+  const bp = bandProduct();
+  if (bp) {
+    const v = variantOf(bp, state.band.variantId), { H, len } = bandSize(bp);
+    const meters = bandMeters();
+    if (bp.unit === "m2") tileLine(state.band, meters * H, "Franja decorativa");
+    else if (meters > 0) {
+      const qty = Math.ceil((meters * 1.1) / len - 1e-9), price = v?.finalPrice ?? bp.price;
+      tiles.push({ name: `${bp.name}${v ? " · " + v.name : ""}`, img: tileImg(bp, v), qty, unit: plural(unitLabel(bp.unit), qty), unitPrice: price, sub: qty * price,
+        detail: `Franja decorativa: ${nf(meters)} m a ${nf(state.band.y)} m de alto + 10 % (pieza de ${nf(len * 100, 0)} cm)` });
+    }
+  }
   for (const g of [...adhesive.values(), ...grout.values()]) {
     const qty = Math.ceil(g.m2 / g.p.coverage_m2 - 1e-9);
     const price = g.v?.finalPrice ?? g.p.price;
@@ -1715,14 +1914,15 @@ const daysText = (d) => `${Math.floor(d) || ""}${d % 1 ? "½" : ""} ${d > 1 ? "d
 function buildPlan() {
   const { w, l, h } = state.room;
   const fp = state.floor && byId(state.floor.productId);
-  const floorM2 = fp ? w * l : 0;
+  const floorM2 = fp ? floorArea() : 0;
   let wallM2 = 0, slow = fp && isPorcelain(fp);
-  for (const side of ["back", "left", "right", "front"]) {
-    const sel = wallTileOf(side), p = sel && byId(sel.productId);
+  for (const d of wallDefs()) {
+    const sel = wallTileOf(d.side), p = sel && byId(sel.productId);
     if (!p) continue;
-    wallM2 += (side === "back" || side === "front" ? w : l) * h - (side === state.room.doorWall ? DOOR.w * DOOR.h : 0);
+    wallM2 += wallArea(d, h);
     slow ||= isPorcelain(p);
   }
+  const bandM = bandProduct() ? bandMeters() : 0;
   const items = state.items.length;
   if (!floorM2 && !wallM2 && !items) return null;
   const stages = [];
@@ -1734,8 +1934,9 @@ function buildPlan() {
       tips: ["Nivela el piso con pendiente hacia el desagüe.", "Impermeabiliza la ducha (piso y paredes hasta 1,8 m) y deja secar 24 horas."] });
     // rendimiento aproximado de un instalador: 8 m²/día en piso, 6 m²/día en pared (porcelanato o gran formato, más lento)
     const k = slow ? 0.75 : 1;
-    stages.push({ name: "Instalación de la cerámica", days: halfUp(floorM2 / (8 * k) + wallM2 / (6 * k)),
-      detail: [floorM2 && `piso ${nf(floorM2)} m²`, wallM2 && `paredes ${nf(wallM2)} m²`].filter(Boolean).join(" · "),
+    // la franja decorativa: unos 12 m lineales por día
+    stages.push({ name: "Instalación de la cerámica", days: halfUp(floorM2 / (8 * k) + wallM2 / (6 * k) + bandM / 12),
+      detail: [floorM2 && `piso ${nf(floorM2)} m²`, wallM2 && `paredes ${nf(wallM2)} m²`, bandM && `franja ${nf(bandM)} m`].filter(Boolean).join(" · "),
       tips: ["Antes de pegar, presenta las piezas en seco para que los cortes queden detrás del sanitario o bajo el mueble.",
         `Pegante para zonas húmedas${slow ? " (de porcelanato)" : ""}, llana dentada y crucetas para juntas parejas.`] });
     stages.push({ name: "Boquilla y limpieza", days: 1,
@@ -1886,7 +2087,9 @@ function updateLabels() {
     const v = new THREE.Vector3(x, 0, z).project(ortho);
     return `<span class="dimlabel" style="left:${(v.x + 1) / 2 * stage.clientWidth}px;top:${(1 - v.y) / 2 * stage.clientHeight}px">${text}</span>`;
   };
-  $("labels").innerHTML = put(0, -l / 2 - 0.3, fmtM(w)) + put(w / 2 + 0.38, 0, fmtM(l));
+  const n = notchOf();
+  $("labels").innerHTML = put(0, -l / 2 - 0.3, fmtM(w)) + put(w / 2 + 0.38, 0, fmtM(l)) +
+    (n ? put(n.sx * (w / 2 - n.w / 2), n.cz + n.sz * 0.22, fmtM(n.w)) + put(n.cx + n.sx * 0.38, n.sz * (l / 2 - n.l / 2), fmtM(n.l)) : "");
 }
 let hintTimer;
 function flash(msg) {
@@ -2016,6 +2219,7 @@ async function startPhoto() {
     if (envHdr) scene.environment = envHdr;
     photoTarget = PHOTO_SAMPLES[quality];
     await new Promise((r) => setTimeout(r, 30)); // que se alcance a ver "Preparando…"
+    for (const o of itemsGroup.children) if (o.userData.mirror) o.userData.mirror.visible = false; // el trazado de rayos refleja con el vidrio
     pt.setScene(scene, persp);
     photoOn = true;
     controls.addEventListener("change", photoMoved);

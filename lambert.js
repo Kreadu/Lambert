@@ -128,8 +128,41 @@
     return number ? { dial: countryOf(document.getElementById(`${id}-cc`).value).dial, number } : null;
   }
 
-  /** Productos con su media agrupada: { photos:[url], spin:[url], model:url|null }. */
-  async function loadProducts() {
+  // ── Sedes: puntos de venta de la tienda, cada uno con su stock (y su precio, si lo pone) ──
+  /** Sedes activas de la tienda; [] si no tiene o falta correr supabase/012-sedes.sql. */
+  async function loadBranches() {
+    const { data, error } = await db.from("store_branches").select("*").eq("store_id", C.storeId).eq("active", true).order("position").order("name");
+    return error ? [] : data;
+  }
+  const branchKey = () => `lambert_sede_${storeSlug()}`;
+  /** La sede elegida: ?sede=<id> en la dirección (pantalla de la tienda) o la última que eligió el cliente. */
+  function pickBranch(branches) {
+    let id = new URLSearchParams(location.search).get("sede");
+    if (!id) try { id = localStorage.getItem(branchKey()); } catch { /* sin almacenamiento */ }
+    return branches.find((b) => b.id === id) || null;
+  }
+  /** "Comprando en: …"; al cambiar de sede se vuelve a cargar la página con su stock. */
+  function branchPicker(el, branches, current) {
+    if (!el || !branches.length) return;
+    el.innerHTML = `<label class="branch-pick"><span>Comprando en</span><select class="input" aria-label="Sede">
+      ${current ? "" : `<option value="">Elige tu sede…</option>`}${branches.map((b) =>
+        `<option value="${b.id}"${b.id === current?.id ? " selected" : ""}>${esc(b.name)}${b.city ? ` · ${esc(b.city)}` : ""}</option>`).join("")}</select></label>`;
+    el.querySelector("select").onchange = (e) => {
+      try { localStorage.setItem(branchKey(), e.target.value); } catch { /* sin almacenamiento */ }
+      const u = new URL(location.href);
+      u.searchParams.delete("sede");
+      location.href = u.href;
+    };
+  }
+
+  /** Productos con su media agrupada: { photos:[url], spin:[url], model:url|null }.
+   *  Con `branch`, el stock y el precio son los de esa sede (lo que no tiene dato propio queda con el general). */
+  async function loadProducts({ branch } = {}) {
+    const own = new Map();
+    if (branch) {
+      const { data: bs } = await db.from("branch_stock").select("variant_id, stock, price").eq("branch_id", branch.id);
+      (bs || []).forEach((r) => own.set(r.variant_id, r));
+    }
     const [, { data, error }] = await Promise.all([loadCategories(), db
       .from("products")
       .select("*, product_media(id, kind, path, position), product_variants(*)")
@@ -141,6 +174,7 @@
       const media = (p.product_media || []).slice().sort((a, b) => a.position - b.position);
       const of = (k) => media.filter((m) => m.kind === k);
       const variants = (p.product_variants || []).slice().sort((a, b) => a.position - b.position)
+        .map((v) => { const o = own.get(v.id); return o ? { ...v, stock: o.stock, price: o.price ?? v.price } : v; })
         .map((v) => ({ ...v, finalPrice: v.price ?? p.price, texture: v.texture_path ? fileUrl(v.texture_path) : null }));
       const inStock = variants.filter((v) => v.active && v.stock > 0);
       const prices = (variants.length ? inStock : [p]).map((v) => v.finalPrice ?? v.price);
@@ -219,5 +253,5 @@
     return blob && blob.size < file.size ? blob : file;
   }
 
-  window.Lambert = { C, db, configured, S, COUNTRIES, CURRENCIES, countryOf, loadStore, useStore, storeSlug, renderBrand, withStore, phoneField, isoOfDial, phoneDigits, phoneValue, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, mountSpin, mountModel, compressImage };
+  window.Lambert = { C, db, configured, S, COUNTRIES, CURRENCIES, countryOf, loadStore, useStore, storeSlug, renderBrand, withStore, phoneField, isoOfDial, phoneDigits, phoneValue, CATEGORIES, categoryLabel, loadCategories, slugify, UNITS, unitLabel, money, esc, fileUrl, loadProducts, loadBranches, pickBranch, branchPicker, mountSpin, mountModel, compressImage };
 })();

@@ -53,6 +53,7 @@
     <button class="chip" type="button" data-tab="disenos">Diseños guardados</button>
     <button class="chip" type="button" data-tab="inventario">📦 Ingresar inventario</button>
     <button class="chip" type="button" data-tab="instalacion">🔧 Instalación</button>
+    <button class="chip" type="button" data-tab="sedes">🏬 Sedes</button>
     <button class="chip" type="button" data-tab="tiendas" hidden>Tiendas</button>
   </nav>
 
@@ -138,6 +139,28 @@
       sellantes…). El diseñador los suma en un presupuesto aparte, adjunto a la cotización.</p>
     <div class="status" id="kitsStatus"></div>
     <div id="kits"></div>
+  </section>
+
+  <!-- Sedes: puntos de venta con su stock y su precio -->
+  <section id="branchesPanel" class="panel" hidden>
+    <h2>Sedes</h2>
+    <p class="muted" style="margin:-4px 0 12px">Si vendes en varios puntos, crea una sede por cada uno. El cliente elige "Comprando en…"
+      en el catálogo y el diseñador, y ve el stock (y el precio) de esa sede. Lo que dejes vacío usa el stock y el precio generales.</p>
+    <div class="status" id="branchesStatus"></div>
+    <div id="branches"></div>
+    <form id="branchAdd" class="kit-add" style="flex-wrap:wrap">
+      <input class="input" name="name" placeholder="Nombre (Sede Norte)" maxlength="80" required style="flex:2;min-width:140px">
+      <input class="input" name="city" placeholder="Ciudad" maxlength="80" style="flex:1;min-width:100px">
+      <button class="btn" type="submit">Agregar sede</button>
+    </form>
+    <div id="branchStockBox" hidden>
+      <div class="section">Stock y precio por sede</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <select class="input" id="bsBranch" aria-label="Sede" style="flex:1;min-width:140px"></select>
+        <input class="input" id="bsFilter" placeholder="Buscar producto o color" style="flex:2;min-width:160px">
+      </div>
+      <div id="branchStock"></div>
+    </div>
   </section>
 
   <!-- Datos de la empresa -->
@@ -362,7 +385,7 @@ function fillCategorySelect() {
 fillCategorySelect();
 
 // "listPanel" = el panel principal, con sus pestañas
-const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"], inventario: ["stockPanel"], instalacion: ["kitsPanel"], empresa: ["companyPanel"], tiendas: ["storesPanel"] };
+const TABS = { productos: ["listPanel", "bulkPanel"], disenos: ["designsPanel"], inventario: ["stockPanel"], instalacion: ["kitsPanel"], sedes: ["branchesPanel"], empresa: ["companyPanel"], tiendas: ["storesPanel"] };
 let tab = "productos";
 function show(section) {
   const main = section === "listPanel";
@@ -379,6 +402,7 @@ $("tabs").addEventListener("click", (e) => {
   if (!b) return;
   tab = b.dataset.tab;
   show("listPanel");
+  if (tab === "sedes") renderBranchStock(); // con los productos ya cargados
 });
 // ojo para ver la contraseña
 document.addEventListener("click", (e) => {
@@ -437,6 +461,7 @@ async function enterStore(store) {
   await refreshList();
   loadDesigns();
   loadKits();
+  loadBranchesAdmin();
   loadStockHistory();
   stockLines = []; renderStock();
 }
@@ -1359,6 +1384,94 @@ $("kits").addEventListener("click", async (e) => {
   const { error } = await db.from("install_kits").delete().eq("id", id);
   if (error) return status("kitsStatus", "No se pudo quitar.", "err");
   kits = kits.filter((k) => k.id !== id); renderKits();
+});
+
+// ── Sedes (012): datos de cada punto de venta y su stock/precio por color ──
+let branches = null, bstock = new Map(); // variant_id → { stock, price } de la sede elegida
+async function loadBranchesAdmin() {
+  const { data, error } = await db.from("store_branches").select("*").eq("store_id", C.storeId).order("position").order("name");
+  if (error) { branches = null; status("branchesStatus", /store_branches/.test(error.message) ? "Falta correr supabase/012-sedes.sql en Supabase." : "No se pudieron cargar.", "err"); }
+  else { branches = data; status("branchesStatus", ""); }
+  renderBranches();
+  await loadBranchStock();
+}
+function renderBranches() {
+  $("branchAdd").hidden = !branches;
+  $("branchStockBox").hidden = !branches?.length;
+  if (!branches) { $("branches").innerHTML = ""; return; }
+  $("branches").innerHTML = branches.map((b) => `<div class="kit-row" style="flex-wrap:wrap" data-b="${b.id}">
+    <input class="input" data-bf="name" value="${esc(b.name)}" maxlength="80" aria-label="Nombre" style="flex:2;min-width:120px">
+    <input class="input" data-bf="city" value="${esc(b.city)}" maxlength="80" placeholder="Ciudad" aria-label="Ciudad" style="flex:1;min-width:90px">
+    <input class="input" data-bf="address" value="${esc(b.address)}" maxlength="200" placeholder="Dirección" aria-label="Dirección" style="flex:2;min-width:120px">
+    <input class="input" data-bf="whatsapp" value="${esc(b.whatsapp)}" inputmode="numeric" maxlength="15" placeholder="WhatsApp (opcional)" aria-label="WhatsApp de la sede" style="flex:1;min-width:110px">
+    <label class="row muted" style="font-size:13px"><input type="checkbox" data-bf="active" ${b.active ? "checked" : ""}> Activa</label>
+    <button type="button" class="icon-btn" data-bdel="${b.id}" aria-label="Borrar sede">✕</button></div>`).join("")
+    || `<p class="muted">Todavía no hay sedes: todo usa el stock general.</p>`;
+  const keep = $("bsBranch").value;
+  $("bsBranch").innerHTML = branches.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join("");
+  if (branches.some((b) => b.id === keep)) $("bsBranch").value = keep;
+}
+async function loadBranchStock() {
+  bstock = new Map();
+  const id = $("bsBranch").value;
+  if (id) {
+    const { data } = await db.from("branch_stock").select("variant_id, stock, price").eq("branch_id", id);
+    (data || []).forEach((r) => bstock.set(r.variant_id, r));
+  }
+  renderBranchStock();
+}
+function renderBranchStock() {
+  if (!$("bsBranch").value) { $("branchStock").innerHTML = ""; return; }
+  const q = $("bsFilter").value.trim().toLowerCase();
+  const rows = products.flatMap((p) => p.variants.map((v) => ({ p, v }))).filter(({ p, v }) => !q || `${p.name} ${v.name}`.toLowerCase().includes(q));
+  $("branchStock").innerHTML = rows.slice(0, 200).map(({ p, v }) => { const o = bstock.get(v.id); return `<div class="kit-row" data-v="${v.id}">
+    <span style="flex:1;min-width:0">${esc(p.name)} · <b>${esc(v.name)}</b></span>
+    <input class="input" type="number" min="0" step="1" data-bs="stock" value="${o ? o.stock : ""}" placeholder="${v.stock}" aria-label="Stock en la sede" title="Vacío = stock general (${v.stock})" style="width:80px">
+    <input class="input" type="number" min="0" step="100" data-bs="price" value="${o?.price ?? ""}" placeholder="${v.price ?? p.price}" aria-label="Precio en la sede" title="Vacío = precio general" style="width:110px"></div>`; }).join("")
+    + (rows.length > 200 ? `<p class="muted">Mostrando 200 de ${rows.length}: busca para ver los demás.</p>` : "");
+}
+$("bsBranch").addEventListener("change", loadBranchStock);
+$("bsFilter").addEventListener("input", renderBranchStock);
+$("branchStock").addEventListener("change", async (e) => {
+  const row = e.target.closest("[data-v]");
+  if (!row) return;
+  const vid = row.dataset.v, branch_id = $("bsBranch").value;
+  const stock = row.querySelector('[data-bs="stock"]').value, price = row.querySelector('[data-bs="price"]').value;
+  const res = stock === "" && price === ""
+    ? await db.from("branch_stock").delete().eq("branch_id", branch_id).eq("variant_id", vid)          // vuelve al general
+    : await db.from("branch_stock").upsert({ branch_id, variant_id: vid, store_id: C.storeId,
+        stock: stock === "" ? products.flatMap((p) => p.variants).find((v) => v.id === vid)?.stock ?? 0 : Math.max(0, Math.round(Number(stock))),
+        price: price === "" ? null : Math.max(0, Number(price)) });
+  if (res.error) { console.error(res.error); return status("branchesStatus", "No se pudo guardar el stock de la sede.", "err"); }
+  status("branchesStatus", "Guardado ✓", "ok");
+  await loadBranchStock();
+});
+$("branches").addEventListener("change", async (e) => {
+  const row = e.target.closest("[data-b]"), f = e.target.dataset.bf;
+  if (!row || !f) return;
+  const val = f === "active" ? e.target.checked : f === "whatsapp" ? e.target.value.replace(/\D/g, "").replace(/^0+/, "") : e.target.value.trim();
+  if (f === "name" && !val) return status("branchesStatus", "La sede necesita un nombre.", "err");
+  const { error } = await db.from("store_branches").update({ [f]: val }).eq("id", row.dataset.b);
+  if (error) { console.error(error); return status("branchesStatus", "No se pudo guardar.", "err"); }
+  Object.assign(branches.find((b) => b.id === row.dataset.b), { [f]: val });
+  status("branchesStatus", "Guardado ✓", "ok");
+  if (f === "name") renderBranches();
+});
+$("branches").addEventListener("click", async (e) => {
+  const id = e.target.dataset.bdel;
+  if (!id || !confirm("¿Borrar esta sede y su stock propio?")) return;
+  const { error } = await db.from("store_branches").delete().eq("id", id);
+  if (error) return status("branchesStatus", "No se pudo borrar.", "err");
+  branches = branches.filter((b) => b.id !== id); renderBranches(); loadBranchStock();
+});
+$("branchAdd").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const row = { store_id: C.storeId, name: f.name.value.trim(), city: f.city.value.trim(), position: (branches?.length || 0) + 1 };
+  if (!row.name) return;
+  const { data, error } = await db.from("store_branches").insert(row).select().single();
+  if (error) { console.error(error); return status("branchesStatus", "No se pudo agregar la sede.", "err"); }
+  branches.push(data); f.reset(); renderBranches(); loadBranchStock();
 });
 
 LambertImport.init({ db, C, products: () => products, refresh: refreshList });

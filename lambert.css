@@ -171,3 +171,8 @@ textarea.input{min-height:80px;resize:vertical}
 .d-follow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .d-follow .d-status{flex:0 0 auto;width:auto;font-weight:500;padding:6px 8px}
 .d-follow .d-note{flex:1 1 200px;min-width:0;padding:6px 10px;font-size:13px}
+
+/* "Comprando en: [sede]" en el encabezado */
+.branch-pick{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);white-space:nowrap}
+.branch-pick .input{width:auto;max-width:190px;padding:6px 8px;font-size:13px}
+@media (max-width:640px){.branch-pick span{display:none}.branch-pick .input{max-width:130px}}

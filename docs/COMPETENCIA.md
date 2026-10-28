@@ -107,10 +107,10 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 | 3 | Imagen HD | ☀ Luz → "Descargar imagen HD" (2560 px). En el celular "Enviar" abre Compartir (WhatsApp con la foto). |
 | 4 | Contorno del elegido | `OutlinePass` azul en calidad Alta; en Básica y en planta sigue la caja. |
 | 5 | Modelos comprimidos | `GLTFLoader` con Draco y KTX2 (decodificadores del CDN de three 0.169). |
-| 6 | Medidas arrastrando paredes | En **Planta** se arrastra una pared (cada 5 cm); la habitación sigue centrada. Baños en L: pendiente. |
+| 6 | Medidas arrastrando paredes | En **Planta** se arrastra una pared (cada 5 cm); la habitación sigue centrada. **Baños en L**: hecho (paso 1 → Forma; las paredes del entrante también se arrastran). |
 | 7 | Foto realista | 📷 trazado de rayos con `three-gpu-pathtracer@0.0.23`: se afina mientras la cámara está quieta; luego Guardar/Enviar y va al presupuesto. En tarjetas viejas o sin tarjeta congela la página → ahí entrega la imagen HD (`?foto=forzar` lo intenta igual). **Sin probar en un equipo con tarjeta moderna.** |
 | 8 | Calidad automática | Auto/Básica/Alta en ☀ Luz. Auto elige por la tarjeta de video y baja sola si va a menos de 24 cuadros/s, con aviso. |
-| 9 | Post-proceso | Alta: GTAO (sombra de contacto), SMAA, contorno. Se mantuvo tone mapping Neutral (AgX y ACES vuelven beige el blanco). Reflejo real en espejos: pendiente. |
+| 9 | Post-proceso | Alta: GTAO (sombra de contacto), SMAA, contorno. Se mantuvo tone mapping Neutral (AgX y ACES vuelven beige el blanco). Reflejo real en espejos: hecho (`Reflector`, en calidad Alta). |
 | 10 | Luz y ventana | Día / Tarde / Noche, intensidad y ventana en la pared opuesta a la puerta (el cielo cambia con la hora). Se guarda con el diseño. |
 | 11 | Estilos listos | Paso 1 → "Dale un estilo": Blanco moderno, Madera cálida, Mármol, Industrial, Clásico, con cerámica en stock; cambia también el color de grifería y la hora. |
 | 12 | Pasos numerados | Ya existían (1 Tu baño · 2 Piso y paredes · 3 Productos · 4 Resumen). |
@@ -132,6 +132,6 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 | Idea | Estado |
 |---|---|
 | Plan de obra por etapas con días, según los m² reales y los productos, y "¿Hay que retirar la cerámica vieja?" (de Pablo, pero con medidas reales) | **Hecho**: Resumen, WhatsApp y PDF |
-| Listelo / franja decorativa en la pared (los "Decorados" de Corona) | Pendiente |
+| Listelo / franja decorativa en la pared (los "Decorados" de Corona) | **Hecho**: pestaña "Franja" en el paso 2, altura ajustable, se corta en puerta y ventana, se cotiza por piezas |
 | Agregar todo el diseño al carrito de la tienda en un clic | Cuando haya tienda en línea |
-| Precio y stock según la sede elegida (multitienda ya existe) | Pendiente revisar |
+| Precio y stock según la sede elegida | **Hecho**: `supabase/012-sedes.sql`, pestaña 🏬 Sedes en el admin, "Comprando en…" en el catálogo y el diseñador |

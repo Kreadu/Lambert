@@ -214,6 +214,7 @@
   <a class="brand" id="brand" href="catalogo.html" style="color:inherit;text-decoration:none">Catálogo</a>
   <span class="muted">· Diseña tu baño</span>
   <div class="row" style="margin-left:auto">
+    <div id="branchSlot" class="no-print"></div>
     <button class="btn no-print" id="openCode" type="button"><span class="code-label">Tengo un </span>código</button>
     <a class="btn no-print" id="homeLink" href="catalogo.html" style="text-decoration:none">← Catálogo</a>
   </div>
@@ -391,7 +392,7 @@ import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
 
-const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
+const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadBranches, pickBranch, branchPicker, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
 $("cPhoneSlot").outerHTML = phoneField("cPhone", "CO", "", 'maxlength="20"');
 
@@ -523,6 +524,10 @@ function persist() {
 }
 
 let products = [];
+let branch = null;                  // sede donde compra el cliente (012-sedes), o null
+// WhatsApp de la sede (si tiene uno propio) o el de la tienda
+const storeWa = () => (branch?.whatsapp ? `${branch.whatsapp_cc}${branch.whatsapp}` : C.whatsapp);
+const branchLine = () => (branch ? `\nSede: ${branch.name}${branch.city ? `, ${branch.city}` : ""}` : "");
 const byId = (id) => products.find((p) => p.id === id);
 const variantOf = (p, vid) => p?.variants.find((v) => v.id === vid) || p?.inStock[0] || p?.variants[0] || null;
 const hexOf = (v, fallback = "#e8e8e6") => (v?.color_hex && /^#[0-9a-f]{6}$/i.test(v.color_hex) ? v.color_hex : fallback);
@@ -2277,7 +2282,11 @@ async function init() {
   renderBrand($("brand"));
   $("cPhone-cc").value = C.country;
   try {
-    products = await loadProducts();
+    // sede elegida (012): su stock y su precio; sin sedes, el catálogo general
+    const branches = await loadBranches();
+    branch = pickBranch(branches);
+    branchPicker($("branchSlot"), branches, branch);
+    products = await loadProducts({ branch });
     // materiales de instalación por producto (010); sin la tabla, simplemente no hay
     const { data: k } = await db.from("install_kits").select("applies_to, product_id, qty, position").eq("store_id", C.storeId).order("position");
     kits = k || [];
@@ -2351,7 +2360,8 @@ async function saveDesign() {
   if (!state.items.length && !state.floor && !state.wall) { st("Agrega algo a tu baño antes de guardarlo.", "err"); return null; }
   $("saveBtn").disabled = true; st("Guardando…");
   const phone = phoneValue("cPhone");
-  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false, install: state.install, light: state.light };
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false, install: state.install, light: state.light,
+    band: state.band || null, demo: !!state.demo, sede: branch ? { id: branch.id, name: branch.name } : null };
   const { data: code, error } = await db.rpc("save_design", {
     p_store: C.storeId, p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(),
     p_phone: phone ? `+${phone.dial} ${phone.number}` : "", p_source: KIOSK ? "tienda" : "web",
@@ -2365,13 +2375,13 @@ async function saveDesign() {
     <div id="qr"></div><div class="muted">Escanéalo para seguir en tu celular, o dale el código al asesor.</div></div>`;
   if (window.QRCode) new QRCode($("qr"), { text: designUrl(code), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
   $("waMe").hidden = false;
-  $("waStore").hidden = !C.whatsapp; // aparece solo cuando la tienda tenga su WhatsApp en "Mi empresa"
+  $("waStore").hidden = !storeWa(); // aparece solo cuando la tienda (o la sede) tenga su WhatsApp
   return code;
 }
 // código de país + número, solo dígitos (vacío = WhatsApp deja elegir a quién enviar)
 const waNumber = () => { const v = phoneValue("cPhone"); return v ? v.dial + v.number : ""; };
 const waUrl = (num, text) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
-const roomLabel = () => `${fmtM(state.room.w)} × ${fmtM(state.room.l)}`;
+const roomLabel = () => `${fmtM(state.room.w)} × ${fmtM(state.room.l)}${notchOf() ? ", en L" : ""}`;
 const budgetLines = () => lastRows.map(([t, s]) => `• ${t}: ${money.format(s)}`).join("\n") +
   (quote.install.lines.length ? `\nTotal diseño: ${money.format(lastTotal)}\n\nAccesorios de instalación (presupuesto adjunto):\n` +
     quote.install.lines.map((x) => `• ${qtyText(x)} · ${x.name}: ${money.format(x.sub)}`).join("\n") +
@@ -2386,13 +2396,13 @@ $("waMe").onclick = () => {
     if (window.QRCode) new QRCode($("waQr"), { text: waUrl(num, text), width: 170, height: 170, correctLevel: QRCode.CorrectLevel.L });
     return;
   }
-  const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()})\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\nPrecios sujetos a cambio.${planText(buildPlan())}\n\nÁbrelo aquí: ${designUrl(savedCode)}`;
+  const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()})${branchLine()}\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\nPrecios sujetos a cambio.${planText(buildPlan())}\n\nÁbrelo aquí: ${designUrl(savedCode)}`;
   window.open(waUrl(num, text), "_blank", "noopener");
 };
 // a la tienda o al asesor (cuando exista su número en config.js)
 $("waStore").onclick = () => {
-  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}${planText(buildPlan())}\n\n${designUrl(savedCode)}`;
-  window.open(waUrl(C.whatsapp, text), "_blank", "noopener");
+  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):${branchLine()}\n${budgetLines()}\nTotal: ${money.format(lastTotal)}${planText(buildPlan())}\n\n${designUrl(savedCode)}`;
+  window.open(waUrl(storeWa(), text), "_blank", "noopener");
 };
 // ── Cotización impresa: documento con los datos de la tienda (los navegadores no imprimen WebGL: van imágenes) ──
 let lastViews = null;
@@ -2443,7 +2453,8 @@ function renderQuoteDoc() {
     </header>
     <div class="q-info">
       ${client ? `<div><span>Cliente</span>${esc(client)}</div>` : ""}
-      <div><span>Baño</span>${esc(fmtM(w))} × ${esc(fmtM(l))} · alto ${esc(fmtM(h))}</div>
+      <div><span>Baño</span>${esc(fmtM(w))} × ${esc(fmtM(l))}${notchOf() ? " (en L)" : ""} · alto ${esc(fmtM(h))}</div>
+      ${branch ? `<div><span>Sede</span>${esc([branch.name, branch.address, branch.city].filter(Boolean).join(" · "))}</div>` : ""}
     </div>
     ${img3d ? `<div class="q-views"><figure><img src="${img3d}" alt=""><figcaption>Vista 3D</figcaption></figure><figure><img src="${imgPlan}" alt=""><figcaption>Planta</figcaption></figure></div>` : ""}
     ${quote.sections.map(([title, ls], k) => `<table class="q-table ${ls.length <= 8 ? "q-keep" : ""}">
@@ -2488,7 +2499,8 @@ $("demoChk").addEventListener("change", (e) => { state.demo = e.target.checked; 
 
 async function loadDesign(data) {
   Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false,
-    install: { qty: {}, off: [], extra: [], ...(data.install || {}) }, light: { ...emptyState().light, ...(data.light || {}) } });
+    install: { qty: {}, off: [], extra: [], ...(data.install || {}) }, light: { ...emptyState().light, ...(data.light || {}) },
+    band: data.band || null, demo: !!data.demo });
   state.items = state.items.filter((it) => byId(it.productId));
   select(null);
   renderRoomForm(); renderTileSelects(); renderLightPanel(); buildRoom(); await rebuildItems();

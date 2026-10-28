@@ -11,7 +11,8 @@
 <body>
 <header class="topbar"><div class="wrap">
   <span class="brand" id="brand">Catálogo</span>
-  <a class="btn btn-primary" style="margin-left:auto;text-decoration:none" href="disenar.html">Diseñar mi baño</a>
+  <div id="branchSlot" style="margin-left:auto"></div>
+  <a class="btn btn-primary" style="text-decoration:none" href="disenar.html">Diseñar mi baño</a>
 </div></header>
 
 <main class="wrap">
@@ -42,7 +43,7 @@
 <script src="lambert.js"></script>
 <script src="ilustraciones.js"></script>
 <script>
-const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, renderBrand, withStore, mountSpin, mountModel, illustrate } = Lambert;
+const { C, configured, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadBranches, pickBranch, branchPicker, loadStore, renderBrand, withStore, mountSpin, mountModel, illustrate } = Lambert;
 let products = [];
 let category = "all";
 let search = "";
@@ -60,7 +61,11 @@ async function init() {
       document.title = `${C.storeName} · Catálogo`;
       renderBrand(document.getElementById("brand"));
     }
-    products = await loadProducts();
+    // sede elegida (012): su stock y su precio; sin sedes, el catálogo general
+    const branches = await loadBranches();
+    const branch = pickBranch(branches);
+    branchPicker(document.getElementById("branchSlot"), branches, branch);
+    products = await loadProducts({ branch });
   } catch (e) {
     console.error(e);
     grid.innerHTML = `<div class="empty"><strong>No se pudo cargar el catálogo</strong><button class="btn" onclick="init()" style="margin-top:12px">Reintentar</button></div>`;

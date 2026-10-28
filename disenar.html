@@ -123,6 +123,11 @@
   .sum-sec:first-child{margin-top:0}
   .install-box{margin-top:16px;padding:10px;border:1px dashed var(--border);border-radius:var(--radius-md);background:var(--surface-muted)}
   .install-box .sum-sec{margin-top:0}
+  .plan-box{margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);font-size:14px}
+  .plan-box summary{cursor:pointer}
+  .plan-box ol{margin:8px 0 0;padding-left:20px}
+  .plan-box ol>li{margin-bottom:6px}
+  .plan-box ul{margin:2px 0 0;padding-left:16px;font-size:13px;color:var(--text-secondary)}
   .total.grand{border-top:1px solid var(--border);margin-top:6px}
   .inst-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
   .inst-row .muted{font-size:11.5px}
@@ -180,6 +185,9 @@
   .q-annex{break-before:page;padding-top:4px}
   .q-annex-title{font-size:15px;font-weight:600;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:6px}
   .q-annex-title span{float:right;letter-spacing:.08em}
+  .q-plan{break-inside:avoid;margin-top:16px}
+  .q-plan ol{margin:6px 0;padding-left:18px;font-size:12px}
+  .q-plan li{margin-bottom:4px}
   .q-grand{display:flex;justify-content:space-between;font-size:16px;font-weight:700;padding:8px 4px 0}
   .q-foot{display:flex;justify-content:space-between;gap:16px;margin-top:12px;break-inside:avoid}
   .q-notes{color:#555;font-size:10px}
@@ -276,6 +284,8 @@
         <label class="row" id="suppliesRow" style="font-size:14px;margin-bottom:8px" hidden><input type="checkbox" id="suppliesChk" checked> Incluir pegante y boquilla</label>
         <div id="summary"></div>
         <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Pegante y boquilla son cantidades aproximadas. Precios sujetos a cambio.</p>
+        <label class="row" id="demoRow" style="font-size:14px;margin-top:12px" hidden><input type="checkbox" id="demoChk"> Hay que retirar la cerámica vieja</label>
+        <div id="plan"></div>
         <div id="saveArea" style="margin-top:14px">
           <div class="field"><label for="cName">Tu nombre <span class="muted">(opcional)</span></label><input class="input" id="cName" maxlength="80" autocomplete="name"></div>
           <div class="field"><label for="cPhone">Tu celular <span class="muted">(opcional, para enviarte el diseño por WhatsApp)</span></label><div id="cPhoneSlot"></div></div>
@@ -446,6 +456,7 @@ const emptyState = () => ({
   walls: {},                       // cerámica propia de una pared: { back|front|left|right: { productId, variantId } }
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
   supplies: true,                  // incluir pegante y boquilla en la cotización
+  demo: false,                     // hay que retirar la cerámica vieja (suma una etapa al plan de obra)
   install: { qty: {}, off: [], extra: [] }, // accesorios de instalación: cantidades cambiadas, quitados y agregados por el cliente
   light: { mode: "dia", k: 1, window: false }, // hora del día, intensidad y ventana
 });
@@ -1698,6 +1709,45 @@ function buildQuote() {
   const hasDesign = tiles.length + items.length > 0;
   return { sections, total: sections.flatMap(([, ls]) => ls).reduce((n, x) => n + x.sub, 0), hasSupplies: supplies.length > 0, install: buildInstall(hasDesign) };
 }
+// ── Plan de obra: etapas y días aproximados según los m² y los productos del diseño ──
+const halfUp = (d) => Math.max(0.5, Math.ceil(d * 2 - 1e-9) / 2);
+const daysText = (d) => `${Math.floor(d) || ""}${d % 1 ? "½" : ""} ${d > 1 ? "días" : "día"}`;
+function buildPlan() {
+  const { w, l, h } = state.room;
+  const fp = state.floor && byId(state.floor.productId);
+  const floorM2 = fp ? w * l : 0;
+  let wallM2 = 0, slow = fp && isPorcelain(fp);
+  for (const side of ["back", "left", "right", "front"]) {
+    const sel = wallTileOf(side), p = sel && byId(sel.productId);
+    if (!p) continue;
+    wallM2 += (side === "back" || side === "front" ? w : l) * h - (side === state.room.doorWall ? DOOR.w * DOOR.h : 0);
+    slow ||= isPorcelain(p);
+  }
+  const items = state.items.length;
+  if (!floorM2 && !wallM2 && !items) return null;
+  const stages = [];
+  const old = floorM2 + wallM2 || w * l;
+  if (state.demo) stages.push({ name: "Retiro de la cerámica vieja", days: halfUp(old / 12),
+    tips: ["Corta el agua y protege el desagüe antes de picar.", "Retira escombros y deja la superficie limpia y firme."] });
+  if (floorM2 || wallM2) {
+    stages.push({ name: "Preparación e impermeabilización", days: 1,
+      tips: ["Nivela el piso con pendiente hacia el desagüe.", "Impermeabiliza la ducha (piso y paredes hasta 1,8 m) y deja secar 24 horas."] });
+    // rendimiento aproximado de un instalador: 8 m²/día en piso, 6 m²/día en pared (porcelanato o gran formato, más lento)
+    const k = slow ? 0.75 : 1;
+    stages.push({ name: "Instalación de la cerámica", days: halfUp(floorM2 / (8 * k) + wallM2 / (6 * k)),
+      detail: [floorM2 && `piso ${nf(floorM2)} m²`, wallM2 && `paredes ${nf(wallM2)} m²`].filter(Boolean).join(" · "),
+      tips: ["Antes de pegar, presenta las piezas en seco para que los cortes queden detrás del sanitario o bajo el mueble.",
+        `Pegante para zonas húmedas${slow ? " (de porcelanato)" : ""}, llana dentada y crucetas para juntas parejas.`] });
+    stages.push({ name: "Boquilla y limpieza", days: 1,
+      tips: ["Espera 24 horas después de pegar para emboquillar.", "No mojes la ducha hasta 72 horas después de la boquilla."] });
+  }
+  if (items) stages.push({ name: "Instalación de productos", days: halfUp(items / 4),
+    detail: `${items} ${items === 1 ? "producto" : "productos"}`,
+    tips: ["Sella sanitario y lavamanos con silicona antihongos.", "Prueba fugas en todas las conexiones antes de usar el baño."] });
+  return { stages, days: stages.reduce((n, s) => n + s.days, 0) };
+}
+const planText = (plan) => plan ? `\n\nPlan de obra (≈ ${daysText(plan.days)} de trabajo):\n` +
+  plan.stages.map((s, i) => `${i + 1}. ${s.name}: ${daysText(s.days)}`).join("\n") : "";
 const qtyText = (x) => `${nf(x.qty)} ${x.unit}`;
 // accesorios que el cliente puede agregar: lo de instalación y plomería del catálogo (y lo que no se dibuja)
 const installChoices = () => products.filter((p) => (p.category === "instalacion" || (p.placement === "none" && !p.supply_role)) && p.category !== "pegantes")
@@ -1751,6 +1801,14 @@ function renderSummary() {
         `<div class="total" style="font-size:15px"><span>Accesorios de instalación</span><span>${money.format(quote.install.total)}</span></div>
         <div class="total grand"><span>Total con instalación</span><span>${money.format(total + quote.install.total)}</span></div></div>` : "")
     : `<p class="muted">Elige la cerámica y agrega productos para ver el total.</p>`;
+  const plan = buildPlan();
+  const planOpen = !!$("plan").querySelector("details[open]"); // que no se cierre al cambiar algo
+  $("plan").innerHTML = plan ? `<details class="plan-box"${planOpen ? " open" : ""}><summary><b>Plan de obra</b> · ≈ ${esc(daysText(plan.days))} de trabajo</summary><ol>` +
+    plan.stages.map((s) => `<li><b>${esc(s.name)}</b> · ${esc(daysText(s.days))}${s.detail ? ` <span class="muted">(${esc(s.detail)})</span>` : ""}
+      <ul>${s.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></li>`).join("") +
+    `</ol><p class="muted" style="font-size:12px;margin:6px 0 0">Días de un instalador, aproximados. Sin contar tiempos de secado entre etapas.</p></details>` : "";
+  $("demoRow").hidden = !plan;
+  $("demoChk").checked = !!state.demo;
   $("suppliesRow").hidden = !quote.hasSupplies;
   $("suppliesChk").checked = state.supplies !== false;
   lastRows = sections.flatMap(([, ls]) => ls.map((x) => [`${qtyText(x)} · ${x.name}`, x.sub]));
@@ -2124,12 +2182,12 @@ $("waMe").onclick = () => {
     if (window.QRCode) new QRCode($("waQr"), { text: waUrl(num, text), width: 170, height: 170, correctLevel: QRCode.CorrectLevel.L });
     return;
   }
-  const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()})\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\nPrecios sujetos a cambio.\n\nÁbrelo aquí: ${designUrl(savedCode)}`;
+  const text = `Mi diseño de baño en ${C.storeName}: ${savedCode} (${roomLabel()})\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\nPrecios sujetos a cambio.${planText(buildPlan())}\n\nÁbrelo aquí: ${designUrl(savedCode)}`;
   window.open(waUrl(num, text), "_blank", "noopener");
 };
 // a la tienda o al asesor (cuando exista su número en config.js)
 $("waStore").onclick = () => {
-  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}\n${designUrl(savedCode)}`;
+  const text = `Hola, quiero cotizar mi diseño de baño ${savedCode} (${roomLabel()}):\n${budgetLines()}\nTotal: ${money.format(lastTotal)}${planText(buildPlan())}\n\n${designUrl(savedCode)}`;
   window.open(waUrl(C.whatsapp, text), "_blank", "noopener");
 };
 // ── Cotización impresa: documento con los datos de la tienda (los navegadores no imprimen WebGL: van imágenes) ──
@@ -2170,6 +2228,7 @@ function renderQuoteDoc() {
   const client = [$("cName").value.trim(), phone ? `+${phone.dial} ${phone.number}` : ""].filter(Boolean).join(" · ");
   const { w, l, h } = state.room;
   const qr = savedCode ? qrDataUrl(designUrl(savedCode)) : null;
+  const plan = buildPlan();
   $("quote").innerHTML = `
     <header class="q-head">
       <div class="q-store">${C.logo ? `<img class="q-logo" src="${esc(C.logo)}" alt="">` : ""}
@@ -2200,6 +2259,9 @@ function renderQuoteDoc() {
       <div class="q-total"><span>Accesorios de instalación</span><span>${money.format(quote.install.total)}</span></div>
       <div class="q-grand"><span>Total cotización + accesorios</span><span>${money.format(quote.total + quote.install.total)}</span></div>
     </section>` : ""}
+    ${plan ? `<section class="q-plan"><div class="q-annex-title">Plan de obra · ≈ ${esc(daysText(plan.days))} de trabajo</div><ol>` +
+      plan.stages.map((s) => `<li><b>${esc(s.name)}</b> · ${esc(daysText(s.days))}${s.detail ? ` (${esc(s.detail)})` : ""}<div class="q-det">${s.tips.map(esc).join(" ")}</div></li>`).join("") +
+      `</ol><p class="q-det">Días de un instalador, aproximados, sin contar tiempos de secado entre etapas.</p></section>` : ""}
     <div class="q-foot">
       <div class="q-notes">
         <p>La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Las cantidades de pegante y boquilla son aproximadas.</p>
@@ -2218,6 +2280,7 @@ $("printBtn").onclick = async () => {
   setTimeout(() => print(), 50);
 };
 $("suppliesChk").addEventListener("change", (e) => { state.supplies = e.target.checked; persist(); renderSummary(); });
+$("demoChk").addEventListener("change", (e) => { state.demo = e.target.checked; persist(); renderSummary(); });
 
 async function loadDesign(data) {
   Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false,

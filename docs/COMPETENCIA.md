@@ -115,3 +115,23 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 | 11 | Estilos listos | Paso 1 → "Dale un estilo": Blanco moderno, Madera cálida, Mármol, Industrial, Clásico, con cerámica en stock; cambia también el color de grifería y la hora. |
 | 12 | Pasos numerados | Ya existían (1 Tu baño · 2 Piso y paredes · 3 Productos · 4 Resumen). |
 | 13 | PDF con foto | "Imprimir / PDF"; si se sacó la foto realista o HD, esa va en el presupuesto. |
+
+## Porcelanosa, Corona y Sodimac/Homecenter (analizados con agent-browser, 2026-10-28)
+
+- **Porcelanosa**: "Diseña tu espacio" lleva a `spaces.porcelanosa.com`, que respondía *Server Unavailable* (CO y ES). Su "Visita 360°" en Colombia da error. Volver a intentar más adelante.
+- **Corona** (`corona.co/simulador-de-ambientes`, hecho por Mudi con **krpano**): eliges el ambiente (Baño principal, Baño social…) y el estilo
+  (Moderno, Clásico contemporáneo, Rústico natural). Abre un **panorama 360° prerenderizado**, donde cada producto es una capa de foto.
+  Se ve realista, pero las medidas son fijas, solo trae productos de Corona y no da cantidades. Menú: Pisos, Paredes, **Decorados**
+  (franja o pared decorativa aparte), Sanitarios y Muebles. Al final: "Agregar todos los productos" al carrito y "Crear otra simulación".
+  Los precios y la disponibilidad dependen de la ciudad ("Comprando en Bogotá"). Tiene además una calculadora de ahorro de agua y un simulador de pintura.
+- **Homecenter** (Sodimac): no tiene diseñador 3D. Tiene **"Pablo"**, un asistente con IA (Streamlit, `agente-pablo.soditools.dev`) que pregunta por el estilo
+  y por si hay que retirar el piso viejo, y responde con un **plan de obra por etapas, con días** (retiro, preparación e impermeabilización,
+  instalación, boquilla) y recomendaciones. **No calcula cajas** y, en la prueba, la lista de productos falló con un error de Python.
+
+### Ideas para Lambert
+| Idea | Estado |
+|---|---|
+| Plan de obra por etapas con días, según los m² reales y los productos, y "¿Hay que retirar la cerámica vieja?" (de Pablo, pero con medidas reales) | **Hecho**: Resumen, WhatsApp y PDF |
+| Listelo / franja decorativa en la pared (los "Decorados" de Corona) | Pendiente |
+| Agregar todo el diseño al carrito de la tienda en un clic | Cuando haya tienda en línea |
+| Precio y stock según la sede elegida (multitienda ya existe) | Pendiente revisar |

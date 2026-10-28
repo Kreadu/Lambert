@@ -50,12 +50,21 @@ test("cotización: cerámica en cajas, pegante y boquilla, y accesorios de insta
   await expect(box).toContainText(nombre);
   await expect(box).not.toContainText("Agregado por ti");
 
+  // plan de obra: etapas con días; retirar la cerámica vieja suma una etapa y no cierra el plan
+  await page.locator("#plan summary").click();
+  await expect(page.locator("#plan")).toContainText("Instalación de la cerámica");
+  await expect(page.locator("#plan")).not.toContainText("Retiro");
+  await page.locator("#demoChk").check({ force: true });
+  await expect(page.locator("#plan details")).toHaveAttribute("open", "");
+  await expect(page.locator("#plan")).toContainText("Retiro de la cerámica vieja");
+
   // cotización impresa (sin guardar el diseño): tabla, total y página adjunta
   await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
   const doc = page.locator("#quote");
   await expect(doc.locator(".q-title")).toHaveText("Cotización");
   await expect(doc.locator(".q-total").first()).toContainText("Total");
   await expect(doc.locator(".q-annex")).toContainText("Accesorios de instalación");
+  await expect(doc.locator(".q-plan")).toContainText("Plan de obra");
   expect(await doc.locator(".q-views img").first().getAttribute("src")).toMatch(/^data:image\/jpeg/);
   ok();
 });

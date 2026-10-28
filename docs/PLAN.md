@@ -30,7 +30,20 @@ Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de 
 ## Modelos 3D
 Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empezar. Formato `.glb`.
 
-## Dónde quedamos (2026-10-13)
+## Dónde quedamos (2026-10-28)
+- **Hecho el 2026-10-28:** las 13 ideas de la competencia en `disenar.html`, plan de obra (Resumen, WhatsApp y PDF),
+  baños en L, franja decorativa (listelo), reflejo real en espejos (calidad Alta) y sedes con stock y precio propios
+  (`012-sedes.sql`, **aplicada en la nube**; pestaña 🏬 Sedes en el admin). Pruebas: 18 (correr por archivo, el
+  diseñador tarda ~12 min; si el puerto 8091 queda ocupado, cerrar ese `python3`).
+- **Pendiente para la próxima:**
+  - Volver a analizar Porcelanosa (`spaces.porcelanosa.com` estaba caído). Planner 5D pide cuenta; HomeByMe sin demo.
+  - Datos del catálogo (los arregla el usuario en el admin): quitar la textura de baldosa al Porcelanato liso Blanco,
+    pasarla del Geométrico gris al Floral azul, y subir las fotos de CER-001, CER-002 y CER-013.
+  - Probar la "Foto realista" en un equipo con tarjeta de video moderna (`?foto=forzar`).
+  - Sombras horneadas en Blender cuando haya modelos `.glb` reales.
+  - Ideas sueltas: agregar todo el diseño al carrito (cuando haya tienda en línea), muestra de baño en L.
+
+## Historia (2026-10-13)
 - **2026-10-27: Supabase nuevo en la nube `lueyzfddddyjmqtjefhl`** (el anterior, `kakkqkidixddqjzucrzv`, desapareció
   y no está en ninguna de las dos cuentas). Cargado con `supabase/todo-en-uno.sql` (setup + `002`–`011`, generado por
   `tools/juntar_sql.sh`): 135 productos demo, tienda `lambert`, bucket `catalogo`, admin raipimo36@gmail.com.

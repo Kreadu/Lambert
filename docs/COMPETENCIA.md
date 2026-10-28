@@ -48,6 +48,52 @@ pudo ver ni comparar la calidad visual. No se sabe si "HD" se renderiza en el se
 5. **Modelos comprimidos** con Draco y KTX2 (carga rápida en celulares).
 6. **Medidas arrastrando las paredes** y baños en L (ya en "Después" del plan).
 
-## Pendiente
+## Roca (analizado con agent-browser + REA, 2026-10-28) — **el modelo a seguir en realismo**
 
-Analizar Planner 5D y un fabricante (Roca o Villeroy & Boch).
+https://www.roca.es/configurador-de-banos-3d → `configurador-banos-3d.roca.es`. Público, sin cuenta (guardar y
+compartir sí piden cuenta/correo). Hecho por **Cyncly IdealSpaces** ("SFx Spaces Flex"): **three.js r185** + un motor
+propio en WebAssembly (`3DEngine_Renderer_MT…wasm`). Desde un navegador automático sin ventana bloquea; con
+`agent-browser --headed` entra normal.
+
+**Recorrido:** galería de inspiración → tipo de baño (Estándar, Pequeño, Familiar, Accesible, Industrial, Vintage,
+Hotel…) → 4 estilos ya armados por tipo → editor. Barra: Plano de planta, Añadir elementos, Visualizar, Guardar,
+Deshacer/Rehacer, 2D, Compartir, **Lista de elementos con precio total siempre visible** (2651,17 €), Finalizar.
+
+**Por qué se ve tan real** (encontrado en su código):
+- **Niveles de render**: Líneas, Clásico, Clásico con bordes, **Premium** y **Premium Plus = trazado de rayos en el
+  navegador** que va afinando la imagen cuadro a cuadro (multipaso).
+- **Render en la nube ("HD")**: el servidor genera la foto en modo Premium, PhotoRender o PhotoRealistic, a 16:9 u
+  otras proporciones, hasta **4K**, y también **panorámica 360°**. Campo de visión, perspectiva de 2 puntos y
+  **fondo de ventana a elegir** (Día 00, Día 01…).
+- Materiales PBR completos: `clearcoat`, `transmission` (vidrio), `sheen`, mapas Diffuse/Roughness/Normal; acabados
+  **Mate / Semi Brillo / Alto Brillo** que elige el cliente.
+- Post-proceso: tone mapping **AgX**, TAA/SMAA/FXAA (bordes suaves), SSR (reflejos), SSAO/GTAO (sombra de contacto),
+  Draco y KTX2.
+- **Luz controlable**: iluminación interior automática con intensidad, sol con altura y orientación.
+- **Calidad automática**: baja la calidad sola si el equipo es lento y avisa ("Calidad de renderizado ajustada").
+- En el PC de prueba (Intel HD 3000) el 3D quedó **negro**: un equipo viejo no lo mueve. Lambert debe funcionar
+  en esos equipos y subir de calidad donde se pueda.
+
+## Villeroy & Boch (analizado, 2026-10-28)
+
+`bathroomplanner.villeroy-boch.co.uk/3DPlanerWeb` — público. Motor **Compusoft "Winner"** (C++ → WebAssembly).
+- Pasos fijos arriba: **Inicio → Habitación → Amueblar → Terminado**. Inicio con 7 plantillas con foto y 10 cuartos vacíos.
+- Amueblar en 3 pestañas: Colecciones → Productos → Colores; "artículos que combinan con esta colección".
+- Final: lista de productos con imagen, checklist y **PDF del plan enviado por correo** (pide nombre y correo: capta
+  clientes). **No muestra precios.**
+- Visual sencillo (sin reflejos, sombras suaves), vista isométrica de "casa de muñecas" con paredes recortadas.
+
+## Planner 5D
+
+Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
+
+## Ideas nuevas para Lambert (2026-10-28)
+
+7. **Botón "Foto realista"**: render de alta calidad que se va afinando (trazado de rayos progresivo en el navegador,
+   p. ej. `three-gpu-pathtracer`) con el cliente quieto; resultado para descargar o WhatsApp. Es lo que da el look Roca.
+8. **Calidad automática** según el equipo (Básica / Alta / Foto), con aviso como Roca.
+9. **Post-proceso**: AgX, SSAO/GTAO, SMAA y reflejos en espejo y grifería.
+10. **Fondo de ventana** (día/tarde) y control de luz (intensidad, sol).
+11. **Estilos listos por tipo de baño** (Pequeño, Familiar, Accesible…) con foto realista de portada.
+12. **Pasos numerados** arriba (Inicio → Medidas → Diseñar → Presupuesto), como V&B.
+13. Al final: **PDF del diseño** con plano, foto y lista con precios (V&B no da precios; Lambert sí).

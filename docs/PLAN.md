@@ -67,5 +67,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   satinado, mate, texturizado/relieve…), con la junta hundida y mate. Luz: foto 360° CC0 (`luz/estudio_1k.hdr`,
   neutralizada a blanco), lámpara de techo y tone mapping neutral (three.js 0.169). Ajustes en `disenar.html`:
   `ENV_LEVEL`, `CEILING_LAMP`, `finishOf()`.
+- Competencia (2026-10-27): ver `docs/COMPETENCIA.md` (Victorian Plumbing analizado; ideas: sombras horneadas,
+  esmalte sobre relieve, Foto HD, contorno del elegido, modelos comprimidos).
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

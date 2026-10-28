@@ -165,8 +165,8 @@
 </style>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
 } }
 </script>
 </head>
@@ -309,6 +309,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 
 const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
@@ -406,13 +407,31 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-// sin tone mapping: ACES convertía el blanco en gris/beige. La luz se ajusta para que el blanco dé blanco.
-renderer.toneMapping = THREE.NoToneMapping;
+// tone mapping neutral (Khronos PBR Neutral): el blanco sigue blanco y los brillos no se queman.
+// ACES convertía el blanco en gris/beige.
+renderer.toneMapping = THREE.NeutralToneMapping;
 stage.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(getComputedStyle(document.body).getPropertyValue("--surface-muted").trim() || "#f5f5f5");
-// ambiente de luz para que metales y espejos tengan qué reflejar
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+// ambiente de luz para que cerámica brillante, metales y espejos tengan qué reflejar: foto 360° de un estudio
+// con ventanales (luz/estudio_1k.hdr, CC0, ver luz/CREDITOS.txt). Mientras carga, un estudio generado.
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const ENV_LEVEL = 0.25; // brillo medio del ambiente (la foto viene más fuerte y cálida)
+const CEILING_LAMP = 3;  // lámpara de techo (candelas)
+new RGBELoader().setDataType(THREE.FloatType).load("luz/estudio_1k.hdr", (hdr) => {
+  // balance de blancos y brillo: cada canal a la misma media, para que el blanco siga dando blanco
+  const px = hdr.image.data, mean = [0, 0, 0];
+  for (let i = 0; i < px.length; i += 4) for (let c = 0; c < 3; c++) mean[c] += px[i + c];
+  for (let i = 0; i < px.length; i += 4) {
+    for (let c = 0; c < 3; c++) px[i + c] *= ENV_LEVEL * (px.length / 4) / mean[c];
+    const y = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    for (let c = 0; c < 3; c++) px[i + c] = y + (px[i + c] - y) * 0.2; // casi sin color: reflejos neutros
+  }
+  hdr.mapping = THREE.EquirectangularReflectionMapping;
+  scene.environment = pmrem.fromEquirectangular(hdr).texture;
+  hdr.dispose();
+}, undefined, () => {});
 const ENV_SOFT = 0.35; // reflejo del ambiente en loza y cerámica (los metales usan más)
 const persp = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);   // vista de planta (desde arriba)
@@ -428,7 +447,7 @@ controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 1;
 controls.maxDistance = 12;
-scene.add(new THREE.HemisphereLight(0xffffff, 0xececec, 1.35)); // luz neutra (antes tenía tono cálido)
+scene.add(new THREE.HemisphereLight(0xffffff, 0xececec, 0.8)); // luz neutra (antes tenía tono cálido)
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.intensity = 0.9;
 sun.position.set(2, 5, 3);
@@ -576,8 +595,20 @@ function drawTileFace(ctx, x, y, w, h, product, variant) {
   ctx.restore();
 }
 
+// Acabado de la cerámica según el campo "Acabado" de cada color (y el nombre): brillo, relieve y reflejo
+function finishOf(product, variant) {
+  const f = `${variant?.finish || ""} ${variant?.name || ""} ${product?.name || ""} ${product?.subcategory || ""}`.toLowerCase();
+  if (/vidrio/.test(f)) return { rough: 0.05, relief: 0, env: 1 };
+  if (/brillante|pulido|espejo/.test(f)) return { rough: 0.08, relief: 0, env: 0.9 };
+  if (/metálico|metalico/.test(f)) return { rough: 0.25, relief: 0.2, env: 1, metal: 0.4 };
+  if (/satinado/.test(f)) return { rough: 0.3, relief: 0, env: 0.6 };
+  if (/relieve|texturizado|rústico|rustico|piedra|antideslizante|natural/.test(f)) return { rough: 0.75, relief: 1, env: 0.3 };
+  return { rough: 0.55, relief: 0.15, env: 0.4 }; // mate
+}
+
 // ── Cerámica: textura a escala real (foto de la pieza o su diseño dibujado, con junta) ──
 const texCache = new Map();
+const tileMaps = new Map(); // textura de color → { bump, rough, fin } (fuera de userData: clone() lo copia)
 function tileTexture(product, variant) {
   const key = `${product?.id}:${variant?.id}`;
   if (texCache.has(key)) return texCache.get(key);
@@ -597,16 +628,51 @@ function tileTexture(product, variant) {
       if (img) ctx.drawImage(img, x + grout / 2, y + grout / 2, canvas.width - grout, rowH - grout);
       else drawTileFace(ctx, x + grout / 2, y + grout / 2, canvas.width - grout, rowH - grout, product, variant);
     };
-    piece(0, 0);
-    if (staggered) { piece(-canvas.width / 2, rowH); piece(canvas.width / 2, rowH); }
-    tex.needsUpdate = true;
+    const spots = staggered ? [[0, 0], [-canvas.width / 2, rowH], [canvas.width / 2, rowH]] : [[0, 0]];
+    spots.forEach(([x, y]) => piece(x, y));
+    paintMaps(spots, rowH);
+    tex.needsUpdate = maps.bump.needsUpdate = maps.rough.needsUpdate = true;
     tex.userData.clones?.forEach((c) => (c.needsUpdate = true)); // las copias con su repetición también
+  };
+  // relieve (la junta hundida y, si la pieza tiene textura, sus tonos oscuros) y brillo (la junta siempre mate)
+  const fin = finishOf(product, variant);
+  const bumpCanvas = document.createElement("canvas"), roughCanvas = document.createElement("canvas");
+  bumpCanvas.width = roughCanvas.width = canvas.width;
+  bumpCanvas.height = roughCanvas.height = canvas.height;
+  const paintMaps = (spots, rowH) => {
+    const { width: W, height: H } = canvas;
+    const b = bumpCanvas.getContext("2d", { willReadFrequently: true });
+    b.fillStyle = "#000"; b.fillRect(0, 0, W, H);
+    b.filter = "blur(1px)";                // canto apenas redondeado, como la pieza real
+    b.fillStyle = "#fff";
+    for (const [x, y] of spots) b.fillRect(x + grout / 2, y + grout / 2, W - grout, rowH - grout);
+    b.filter = "none";
+    const bump = b.getImageData(0, 0, W, H);
+    const r = roughCanvas.getContext("2d");
+    const rough = r.createImageData(W, H);
+    let color = null;
+    try { if (fin.relief) color = ctx.getImageData(0, 0, W, H).data; } catch { /* foto sin permiso de lectura: solo la junta */ }
+    const d = bump.data, o = rough.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const face = d[i] / 255;                          // 1 = pieza, 0 = junta
+      const lum = color ? (0.299 * color[i] + 0.587 * color[i + 1] + 0.114 * color[i + 2]) / 255 : 0.5;
+      const h = face * (0.75 + fin.relief * (lum - 0.5) * 0.5);
+      const g = Math.round(255 * (face * fin.rough + (1 - face) * 0.95));
+      d[i] = d[i + 1] = d[i + 2] = Math.round(h * 255);
+      o[i] = o[i + 1] = o[i + 2] = g; o[i + 3] = 255;   // la lee el canal verde
+    }
+    b.putImageData(bump, 0, 0);
+    r.putImageData(rough, 0, 0);
   };
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); // nitidez del piso visto en ángulo
+  const maps = { bump: new THREE.CanvasTexture(bumpCanvas), rough: new THREE.CanvasTexture(roughCanvas) };
+  for (const t of [tex, maps.bump, maps.rough]) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy(); // nitidez del piso visto en ángulo
+  }
   tex.userData = { tw: tw / 100, th: (th * (staggered ? 2 : 1)) / 100, clones: [] };
+  tileMaps.set(tex, { ...maps, fin });
   paint(null);
   if (variant?.texture) {
     const img = new Image();
@@ -621,12 +687,19 @@ function surfaceMaterial(sel, w, h, fallback) {
   const p = sel && byId(sel.productId);
   if (!p) return new THREE.MeshStandardMaterial({ color: fallback, roughness: 0.9 });
   const base = tileTexture(p, variantOf(p, sel.variantId));
-  const tex = base.clone();
-  tex.userData = {};
-  tex.needsUpdate = true;
-  base.userData.clones.push(tex);
-  tex.repeat.set(w / base.userData.tw, h / base.userData.th);
-  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, envMapIntensity: ENV_SOFT });
+  const { bump, rough, fin } = tileMaps.get(base);
+  const copy = (t) => {
+    const c = t.clone();
+    c.userData = {};
+    c.needsUpdate = true;
+    base.userData.clones.push(c);
+    c.repeat.set(w / base.userData.tw, h / base.userData.th);
+    return c;
+  };
+  return new THREE.MeshStandardMaterial({
+    map: copy(base), bumpMap: copy(bump), bumpScale: 1.5 + fin.relief * 2, roughnessMap: copy(rough),
+    roughness: 1, metalness: fin.metal || 0, envMapIntensity: fin.env,
+  });
 }
 
 // ── Habitación ──
@@ -635,6 +708,10 @@ function buildRoom() {
   roomGroup.clear();
   walls = [];
   const { w, l, h } = state.room;
+  // lámpara de techo: más luz abajo y en el centro, más suave en las esquinas altas
+  const lamp = new THREE.PointLight(0xffffff, CEILING_LAMP, 0, 2);
+  lamp.position.set(0, h - 0.05, 0);
+  roomGroup.add(lamp);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, l), surfaceMaterial(state.floor, w, l, "#e9e6e0"));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;

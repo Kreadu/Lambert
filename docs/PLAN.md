@@ -31,7 +31,14 @@ Más adelante, el stock y los precios vendrán de Miel, enlazados por el SKU de 
 Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empezar. Formato `.glb`.
 
 ## Dónde quedamos (2026-10-13)
-- Supabase (`kakkqkidixddqjzucrzv`): migraciones `setup` y `002`–`007` aplicadas; registro de usuarios cerrado.
+- **2026-10-27: Supabase nuevo en la nube `lueyzfddddyjmqtjefhl`** (el anterior, `kakkqkidixddqjzucrzv`, desapareció
+  y no está en ninguna de las dos cuentas). Cargado con `supabase/todo-en-uno.sql` (setup + `002`–`011`, generado por
+  `tools/juntar_sql.sh`): 135 productos demo, tienda `lambert`, bucket `catalogo`, admin raipimo36@gmail.com.
+  Faltan: registro cerrado, URL Configuration (Site URL y Redirect URLs a GitHub Pages), Edge Function
+  `crear-tienda`, crear el usuario y volver a subir las fotos de prueba. Los diseños guardados en la base vieja se perdieron.
+- Supabase local opcional en Docker: `npx supabase start` (`supabase/config.toml`, project_id `lambert`, puertos 544xx
+  para no chocar con Miel; Studio en http://127.0.0.1:54423) y `USAR_SUPABASE_LOCAL = true` en `config.js`.
+- (Historia) Supabase (`kakkqkidixddqjzucrzv`): migraciones `setup` y `002`–`007` aplicadas; registro de usuarios cerrado.
   Catálogo demo de 135 productos (SKU `DEMO-…`, precios de referencia y stock de prueba).
 - Páginas: `catalogo.html`, `admin.html` (con importación Excel/CSV, fotos en lote y diseños guardados), `disenar.html`
   (pasos, baños de muestra, planta, código BA-XXXX, ampliar a pantalla completa, zoom, cerámica distinta en
@@ -56,5 +63,9 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   (fuera del repo): 11 fotos nombradas por SKU para "Subir fotos en lote" y 2 texturas (mármol Carrara,
   baldosa Floral azul) para subir en cada color; LEEME.txt y CREDITOS.txt. Subidas (2026-10-14) salvo correcciones: textura de baldosa en Porcelanato liso/Blanco (quitar), textura Floral azul en Geométrico gris, y fotos de catálogo de CER-001/002/013.
   Vista previa del catálogo con fotos: se ve bien. Falta revisar el diseñador 3D con las texturas reales.
+- Realismo del 3D (2026-10-27): la cerámica toma brillo y relieve del campo "Acabado" de cada color (brillante,
+  satinado, mate, texturizado/relieve…), con la junta hundida y mate. Luz: foto 360° CC0 (`luz/estudio_1k.hdr`,
+  neutralizada a blanco), lámpara de techo y tone mapping neutral (three.js 0.169). Ajustes en `disenar.html`:
+  `ENV_LEVEL`, `CEILING_LAMP`, `finishOf()`.
 - Pendiente: WhatsApp de la tienda en "Mi empresa";
   cargar precios, fotos y referencias reales (exportar → editar en Excel → importar).

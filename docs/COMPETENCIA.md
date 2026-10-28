@@ -97,3 +97,21 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 11. **Estilos listos por tipo de baño** (Pequeño, Familiar, Accesible…) con foto realista de portada.
 12. **Pasos numerados** arriba (Inicio → Medidas → Diseñar → Presupuesto), como V&B.
 13. Al final: **PDF del diseño** con plano, foto y lista con precios (V&B no da precios; Lambert sí).
+
+## Hecho (2026-10-28) — las 13 ideas en `disenar.html`
+
+| # | Idea | Estado |
+|---|---|---|
+| 1 | Sombras horneadas | El cargador ya aplica el mapa de oclusión de cada `.glb`. Falta hornearlo en Blender (Cycles → Bake → Ambient Occlusion → exportar con el `.glb`) cuando haya modelos reales. |
+| 2 | Esmalte sobre relieve | Cerámica y loza con `MeshPhysicalMaterial` + `clearcoat`: brillante/pulido/esmaltado = capa lisa encima del relieve. Ajuste: `finishOf()`. |
+| 3 | Imagen HD | ☀ Luz → "Descargar imagen HD" (2560 px). En el celular "Enviar" abre Compartir (WhatsApp con la foto). |
+| 4 | Contorno del elegido | `OutlinePass` azul en calidad Alta; en Básica y en planta sigue la caja. |
+| 5 | Modelos comprimidos | `GLTFLoader` con Draco y KTX2 (decodificadores del CDN de three 0.169). |
+| 6 | Medidas arrastrando paredes | En **Planta** se arrastra una pared (cada 5 cm); la habitación sigue centrada. Baños en L: pendiente. |
+| 7 | Foto realista | 📷 trazado de rayos con `three-gpu-pathtracer@0.0.23`: se afina mientras la cámara está quieta; luego Guardar/Enviar y va al presupuesto. En tarjetas viejas o sin tarjeta congela la página → ahí entrega la imagen HD (`?foto=forzar` lo intenta igual). **Sin probar en un equipo con tarjeta moderna.** |
+| 8 | Calidad automática | Auto/Básica/Alta en ☀ Luz. Auto elige por la tarjeta de video y baja sola si va a menos de 24 cuadros/s, con aviso. |
+| 9 | Post-proceso | Alta: GTAO (sombra de contacto), SMAA, contorno. Se mantuvo tone mapping Neutral (AgX y ACES vuelven beige el blanco). Reflejo real en espejos: pendiente. |
+| 10 | Luz y ventana | Día / Tarde / Noche, intensidad y ventana en la pared opuesta a la puerta (el cielo cambia con la hora). Se guarda con el diseño. |
+| 11 | Estilos listos | Paso 1 → "Dale un estilo": Blanco moderno, Madera cálida, Mármol, Industrial, Clásico, con cerámica en stock; cambia también el color de grifería y la hora. |
+| 12 | Pasos numerados | Ya existían (1 Tu baño · 2 Piso y paredes · 3 Productos · 4 Resumen). |
+| 13 | PDF con foto | "Imprimir / PDF"; si se sacó la foto realista o HD, esa va en el presupuesto. |

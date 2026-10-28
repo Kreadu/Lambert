@@ -77,3 +77,19 @@ test("diseñador en el celular sin desborde", async ({ page }) => {
   await disenadorListo(page);
   await sinDesbordeHorizontal(page);
 });
+
+test("estilos listos, luz de la tarde con ventana y la imagen HD en un equipo sin tarjeta de video", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 750 });
+  await page.goto("/disenar.html");
+  await disenadorListo(page);
+  await expect(page.locator("[data-style]").first()).toBeVisible();
+  await page.locator("[data-style]").first().click();
+  await page.locator("#lightBtn").click();
+  await page.locator("#lightMode [data-v=tarde]").click();
+  await page.locator("#windowChk").check();
+  // aquí no hay tarjeta de video: la calidad automática queda en Básica y la foto realista entrega la imagen HD
+  await expect(page.locator("#qualNote")).toContainText("Básica");
+  await page.locator("#photoBtn").click();
+  await expect(page.locator("#photoLbl")).toContainText("Imagen HD lista", { timeout: 60_000 });
+  await expect(page.locator("#photoSave")).toBeVisible();
+});

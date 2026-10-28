@@ -77,6 +77,31 @@
   .zoombar{position:absolute;right:10px;top:56px;display:flex;flex-direction:column;gap:6px;z-index:3}
   .zoombar .icon-btn{width:40px;height:40px;font-size:20px;box-shadow:var(--shadow-md);background:var(--surface)}
   body.kiosk .zoombar .icon-btn{width:52px;height:52px;font-size:24px}
+  /* luz y calidad (como el panel "Visualizar" de Roca) */
+  .lightpanel{position:absolute;top:56px;right:60px;z-index:4;width:250px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow-md);font-size:13px}
+  .lightpanel h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-tertiary);margin:10px 0 6px}
+  .lightpanel h4:first-child{margin-top:0}
+  .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;padding:3px;background:var(--surface-muted);border-radius:var(--radius-md)}
+  .seg button{border:none;background:none;padding:6px 4px;border-radius:calc(var(--radius-md) - 2px);cursor:pointer;font-size:12.5px;color:var(--text-secondary)}
+  .seg button.active{background:var(--surface);color:var(--text-primary);font-weight:600;box-shadow:var(--shadow-sm,0 1px 2px rgba(0,0,0,.08))}
+  .lightpanel input[type=range]{width:100%}
+  /* foto realista: barra de progreso y acciones sobre el 3D */
+  .photobar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:5;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-full);padding:6px 8px 6px 16px;box-shadow:var(--shadow-md);font-size:13px;white-space:nowrap;max-width:calc(100% - 24px)}
+  .photobar .bar{width:90px;height:6px;border-radius:3px;background:var(--surface-muted);overflow:hidden}
+  .photobar .bar i{display:block;height:100%;background:var(--text-primary);width:0;transition:width .3s}
+  .photobar .btn{padding:6px 12px;font-size:13px}
+  body.photo .hud,body.photo .zoombar{display:none}
+  .toast{position:absolute;right:12px;bottom:12px;z-index:5;max-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;box-shadow:var(--shadow-md);font-size:13px}
+  .toast b{display:block;margin-bottom:2px}
+  /* estilos listos */
+  .styles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .style-card{display:flex;flex-direction:column;gap:4px;padding:0;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);cursor:pointer;overflow:hidden;text-align:left;font-size:13px}
+  .style-card .sw2{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:54px;overflow:hidden}
+  .style-card .sw2 img{width:100%;height:100%;object-fit:cover;display:block}
+  .style-card b{padding:0 8px 8px;font-weight:600}
+  .style-card:hover{border-color:var(--text-tertiary)}
+  .stage.resize-x canvas{cursor:ew-resize}.stage.resize-z canvas{cursor:ns-resize}
+  @media (max-width:800px){ .lightpanel{right:10px;left:10px;width:auto} .photobar .lbl{display:none} }
   /* ampliado: el baño ocupa toda la pantalla; el panel se oculta */
   body.expanded .topbar,body.expanded .side{display:none}
   body.expanded .app{flex-direction:row}
@@ -166,7 +191,10 @@
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js",
+  "three-gpu-pathtracer": "https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.23/build/index.module.js"
 } }
 </script>
 </head>
@@ -198,7 +226,12 @@
           <div><label for="rl">Largo (m)</label><input class="input" id="rl" type="number" min="0.8" max="8" step="0.05" inputmode="decimal"></div>
           <div><label for="rh">Alto (m)</label><input class="input" id="rh" type="number" min="2" max="4" step="0.05" inputmode="decimal"></div>
         </div>
-        <p class="muted" style="margin-top:6px">¿No trajiste las medidas? Elige el baño de muestra que más se parezca.</p>
+        <p class="muted" style="margin-top:6px">¿No trajiste las medidas? Elige el baño de muestra que más se parezca. En la vista <b>Planta</b> también puedes arrastrar las paredes.</p>
+        <div id="stylesBox" hidden>
+          <h3>Dale un estilo</h3>
+          <div class="styles" id="styles"></div>
+          <p class="muted" style="margin-top:6px">Cambia el piso, las paredes y el color de la grifería con lo que hay en stock.</p>
+        </div>
         <div class="row" style="margin-top:10px">
           <div style="flex:1"><label class="muted" for="doorWall">Puerta en la pared</label>
             <select class="input" id="doorWall">
@@ -252,7 +285,7 @@
           <div class="row" style="flex-wrap:wrap;margin-top:8px">
             <button class="btn" id="waMe" type="button" hidden>📲 Enviármelo por WhatsApp</button>
             <button class="btn" id="waStore" type="button" hidden>Hablar con un asesor</button>
-            <button class="btn" id="printBtn" type="button">Imprimir</button>
+            <button class="btn" id="printBtn" type="button" title="Imprímelo o guárdalo como PDF">Imprimir / PDF</button>
             <button class="btn" id="resetBtn" type="button">Empezar de nuevo</button>
           </div>
           <div id="waQrArea" class="no-print"></div>
@@ -272,8 +305,28 @@
     <div class="viewbar">
       <button class="btn active" id="view3d" type="button">3D</button>
       <button class="btn" id="viewPlan" type="button">Planta</button>
+      <button class="btn" id="photoBtn" type="button" title="Una foto que se va afinando hasta verse real">📷 Foto realista</button>
+      <button class="btn" id="lightBtn" type="button" title="Luz, ventana y calidad">☀ Luz</button>
       <button class="btn" id="fullBtn" type="button" title="Ver el baño en pantalla completa">⛶ Ampliar</button>
     </div>
+    <div class="lightpanel" id="lightPanel" hidden>
+      <h4>Hora del día</h4>
+      <div class="seg" id="lightMode"><button data-v="dia">Día</button><button data-v="tarde">Tarde</button><button data-v="noche">Noche</button></div>
+      <h4>Intensidad</h4>
+      <input type="range" id="lightK" min="0.4" max="1.8" step="0.05" aria-label="Intensidad de la luz">
+      <label class="row" style="margin-top:8px"><input type="checkbox" id="windowChk"> Ventana</label>
+      <h4>Calidad del 3D</h4>
+      <div class="seg" id="qualSeg"><button data-v="auto">Auto</button><button data-v="basica">Básica</button><button data-v="alta">Alta</button></div>
+      <p class="muted" id="qualNote" style="margin-top:6px;font-size:12px"></p>
+      <button class="btn" id="hdBtn" type="button" style="width:100%;margin-top:8px">⬇ Descargar imagen HD</button>
+    </div>
+    <div class="photobar" id="photoBar" hidden>
+      <span class="lbl" id="photoLbl">Afinando la foto…</span><span class="bar"><i id="photoProg"></i></span>
+      <button class="btn" id="photoSave" type="button" hidden>⬇ Guardar</button>
+      <button class="btn" id="photoShare" type="button" hidden>📲 Enviar</button>
+      <button class="btn" id="photoClose" type="button">✕</button>
+    </div>
+    <div class="toast" id="toast" hidden></div>
     <div class="zoombar">
       <button class="icon-btn" id="zoomIn" type="button" title="Acercar" aria-label="Acercar">+</button>
       <button class="icon-btn" id="zoomOut" type="button" title="Alejar" aria-label="Alejar">−</button>
@@ -310,6 +363,14 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
+import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 const { C, db, configured, S, countryOf, CATEGORIES, categoryLabel, unitLabel, money, esc, loadProducts, loadStore, storeSlug, renderBrand, withStore, phoneField, phoneValue, illustrate } = Lambert;
 const $ = (id) => document.getElementById(id);
@@ -386,12 +447,15 @@ const emptyState = () => ({
   items: [],                       // { uid, productId, variantId, x, y, z, rot, wall }
   supplies: true,                  // incluir pegante y boquilla en la cotización
   install: { qty: {}, off: [], extra: [] }, // accesorios de instalación: cantidades cambiadas, quitados y agregados por el cliente
+  light: { mode: "dia", k: 1, window: false }, // hora del día, intensidad y ventana
 });
 const saved = KIOSK ? null : (() => { try { return JSON.parse(localStorage.getItem(`lambert_diseno_${storeSlug()}`) || "null"); } catch { return null; } })();
 const state = saved?.room ? saved : emptyState();
+state.light ||= emptyState().light; // diseños guardados antes de existir la luz
 let savedCode = null;               // código del diseño guardado (se borra si cambia algo)
 function persist() {
   savedCode = null;
+  lastPhoto = null; // la foto ya no corresponde al diseño
   if (!KIOSK) try { localStorage.setItem(`lambert_diseno_${storeSlug()}`, JSON.stringify(state)); } catch { /* sin almacenamiento: solo esta sesión */ }
 }
 
@@ -429,9 +493,10 @@ new RGBELoader().setDataType(THREE.FloatType).load("luz/estudio_1k.hdr", (hdr) =
     for (let c = 0; c < 3; c++) px[i + c] = y + (px[i + c] - y) * 0.2; // casi sin color: reflejos neutros
   }
   hdr.mapping = THREE.EquirectangularReflectionMapping;
-  scene.environment = pmrem.fromEquirectangular(hdr).texture;
-  hdr.dispose();
+  envHdr = hdr; // la foto realista la usa tal cual (no acepta el ambiente ya procesado)
+  envPmrem = scene.environment = pmrem.fromEquirectangular(hdr).texture;
 }, undefined, () => {});
+let envHdr = null, envPmrem = scene.environment;
 const ENV_SOFT = 0.35; // reflejo del ambiente en loza y cerámica (los metales usan más)
 const persp = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
 const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);   // vista de planta (desde arriba)
@@ -447,22 +512,88 @@ controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 1;
 controls.maxDistance = 12;
-scene.add(new THREE.HemisphereLight(0xffffff, 0xececec, 0.8)); // luz neutra (antes tenía tono cálido)
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.intensity = 0.9;
+const hemi = new THREE.HemisphereLight(0xffffff, 0xececec, 0.8); // luz neutra (antes tenía tono cálido)
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.9);
 sun.position.set(2, 5, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.bias = -0.0005;
 scene.add(sun);
+let lamp = null;  // lámpara de techo (se crea con la habitación)
+
+// ── Luz: hora del día e intensidad (como el panel de Roca) ──
+// sol: color, fuerza y dirección · cielo: luz ambiente · lamp: lámpara · env: reflejos · sky: lo que se ve por la ventana
+const LIGHT = {
+  dia:   { sun: 0xffffff, sunI: 0.9, sunPos: [2, 5, 3],   hemi: 0.8,  lamp: 1,   lampC: 0xffffff, env: 1,    sky: ["#cfe3f5", "#f4f8fb"] },
+  tarde: { sun: 0xffb46b, sunI: 1.1, sunPos: [4, 2.2, 2], hemi: 0.55, lamp: 1,   lampC: 0xfff1dc, env: 0.8,  sky: ["#f2a65e", "#fbe1b8"] },
+  noche: { sun: 0x9db4ff, sunI: 0.05, sunPos: [2, 5, 3],  hemi: 0.18, lamp: 1.8, lampC: 0xffe2b8, env: 0.35, sky: ["#0d1630", "#25345c"] },
+};
+function applyLight() {
+  const L = LIGHT[state.light?.mode] || LIGHT.dia, k = state.light?.k ?? 1;
+  sun.color.set(L.sun); sun.intensity = L.sunI * k; sun.position.set(...L.sunPos);
+  hemi.intensity = L.hemi * k;
+  if (lamp) { lamp.color.set(L.lampC); lamp.intensity = CEILING_LAMP * L.lamp * k; }
+  scene.environmentIntensity = L.env * k;
+  paintSky();
+}
+// cielo de la ventana: degradado según la hora; brilla solo (la foto realista lo usa como fuente de luz)
+const skyCanvas = Object.assign(document.createElement("canvas"), { width: 8, height: 64 });
+const skyTex = new THREE.CanvasTexture(skyCanvas);
+skyTex.colorSpace = THREE.SRGBColorSpace;
+const skyMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 1.2 });
+function paintSky() {
+  const [top, bottom] = (LIGHT[state.light?.mode] || LIGHT.dia).sky;
+  const c = skyCanvas.getContext("2d"), g = c.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, top); g.addColorStop(1, bottom);
+  c.fillStyle = g; c.fillRect(0, 0, 8, 64);
+  skyTex.needsUpdate = true;
+  skyMaterial.emissiveIntensity = state.light?.mode === "noche" ? 0.4 : 1.2;
+}
 
 const roomGroup = new THREE.Group();
 const itemsGroup = new THREE.Group();
 scene.add(roomGroup, itemsGroup);
 let walls = [];   // { mesh, side, normal, along, length }
 
+// ── Calidad: Básica (equipos viejos y celulares sencillos) o Alta (sombra de contacto, bordes suaves, contorno) ──
+// "Auto" empieza según la tarjeta de video y baja sola si el 3D va lento, avisando (como Roca)
+const gpuName = (() => { try { const g = renderer.getContext(), d = g.getExtension("WEBGL_debug_renderer_info"); return d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : ""; } catch { return ""; } })();
+const WEAK_GPU = /HD Graphics( [2-4]\d{3})?\b|GMA|SwiftShader|llvmpipe|Mali-[4T]|Adreno \(TM\) [2-5]\d\d|PowerVR/i.test(gpuName);
+let qualityPref = (() => { try { return localStorage.getItem("lambert_calidad") || "auto"; } catch { return "auto"; } })();
+let quality = qualityPref === "auto" ? (WEAK_GPU ? "basica" : "alta") : qualityPref;
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, persp);
+const gtao = new GTAOPass(scene, persp, 1, 1);  // sombra de contacto en esquinas y bajo los productos
+gtao.updateGtaoMaterial({ radius: 0.18, distanceExponent: 1, thickness: 0.5, scale: 1 });
+gtao.blendIntensity = 0.6;
+const outline = new OutlinePass(new THREE.Vector2(1, 1), scene, persp); // contorno del producto elegido
+Object.assign(outline, { edgeStrength: 4, edgeThickness: 1, edgeGlow: 0, pulsePeriod: 0 });
+outline.visibleEdgeColor.set(0x2563eb); outline.hiddenEdgeColor.set(0x2563eb);
+const smaa = new SMAAPass(1, 1);                // bordes suaves
+composer.addPass(renderPass); composer.addPass(gtao); composer.addPass(outline); composer.addPass(new OutputPass()); composer.addPass(smaa);
+const usePost = () => quality === "alta" && !planMode;
+function setQuality(q, why) {
+  quality = q;
+  renderer.setPixelRatio(q === "alta" ? Math.min(devicePixelRatio, 2) : Math.min(devicePixelRatio, 1.25));
+  renderer.shadowMap.type = q === "alta" ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  sun.shadow.mapSize.set(q === "alta" ? 2048 : 1024, q === "alta" ? 2048 : 1024);
+  sun.shadow.map?.dispose(); sun.shadow.map = null;
+  resize();
+  renderLightPanel();
+  if (why) toast("Calidad del 3D ajustada", why);
+}
+// dibuja un cuadro: con efectos en calidad Alta, directo en Básica y en la planta
+function draw() {
+  if (usePost()) { outline.selectedObjects = selected ? [selected] : []; composer.render(); }
+  else renderer.render(scene, camera);
+}
+
 function resize() {
   const { clientWidth: w, clientHeight: h } = stage;
   renderer.setSize(w, h, false);
+  composer.setPixelRatio(renderer.getPixelRatio());
+  composer.setSize(w, h);
   persp.aspect = w / Math.max(h, 1);
   persp.updateProjectionMatrix();
   fitPlan();
@@ -598,12 +729,16 @@ function drawTileFace(ctx, x, y, w, h, product, variant) {
 // Acabado de la cerámica según el campo "Acabado" de cada color (y el nombre): brillo, relieve y reflejo
 function finishOf(product, variant) {
   const f = `${variant?.finish || ""} ${variant?.name || ""} ${product?.name || ""} ${product?.subcategory || ""}`.toLowerCase();
-  if (/vidrio/.test(f)) return { rough: 0.05, relief: 0, env: 1 };
-  if (/brillante|pulido|espejo/.test(f)) return { rough: 0.08, relief: 0, env: 0.9 };
-  if (/metálico|metalico/.test(f)) return { rough: 0.25, relief: 0.2, env: 1, metal: 0.4 };
-  if (/satinado/.test(f)) return { rough: 0.3, relief: 0, env: 0.6 };
-  if (/relieve|texturizado|rústico|rustico|piedra|antideslizante|natural/.test(f)) return { rough: 0.75, relief: 1, env: 0.3 };
-  return { rough: 0.55, relief: 0.15, env: 0.4 }; // mate
+  // coat: capa de esmalte lisa por encima (el relieve queda debajo y el reflejo sigue nítido, como la pieza real)
+  const glossy = /brillante|pulido|espejo|esmaltad/.test(f);
+  if (/vidrio/.test(f)) return { rough: 0.05, relief: 0, env: 1, coat: 1 };
+  if (/metálico|metalico/.test(f)) return { rough: 0.25, relief: 0.2, env: 1, metal: 0.4, coat: 0.3 };
+  if (/relieve|texturizado|rústico|rustico|piedra|antideslizante|natural/.test(f)) return glossy
+    ? { rough: 0.5, relief: 1, env: 0.6, coat: 1 }          // esmalte sobre relieve
+    : { rough: 0.75, relief: 1, env: 0.3, coat: 0 };
+  if (glossy) return { rough: 0.2, relief: 0.1, env: 0.9, coat: 1 };
+  if (/satinado/.test(f)) return { rough: 0.35, relief: 0.1, env: 0.6, coat: 0.4 };
+  return { rough: 0.55, relief: 0.15, env: 0.4, coat: 0 }; // mate
 }
 
 // ── Cerámica: textura a escala real (foto de la pieza o su diseño dibujado, con junta) ──
@@ -696,9 +831,10 @@ function surfaceMaterial(sel, w, h, fallback) {
     c.repeat.set(w / base.userData.tw, h / base.userData.th);
     return c;
   };
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     map: copy(base), bumpMap: copy(bump), bumpScale: 1.5 + fin.relief * 2, roughnessMap: copy(rough),
     roughness: 1, metalness: fin.metal || 0, envMapIntensity: fin.env,
+    clearcoat: fin.coat, clearcoatRoughness: 0.06,
   });
 }
 
@@ -709,7 +845,7 @@ function buildRoom() {
   walls = [];
   const { w, l, h } = state.room;
   // lámpara de techo: más luz abajo y en el centro, más suave en las esquinas altas
-  const lamp = new THREE.PointLight(0xffffff, CEILING_LAMP, 0, 2);
+  lamp = new THREE.PointLight(0xffffff, CEILING_LAMP, 0, 2);
   lamp.position.set(0, h - 0.05, 0);
   roomGroup.add(lamp);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, l), surfaceMaterial(state.floor, w, l, "#e9e6e0"));
@@ -742,6 +878,24 @@ function buildRoom() {
       roomGroup.add(door);
       wall.extra.push(door);
     }
+    // ventana en la pared opuesta a la puerta: se ve el cielo según la hora y deja entrar luz
+    const opposite = { front: "back", back: "front", left: "right", right: "left" }[state.room.doorWall];
+    if (state.light?.window && d.side === opposite && h > 2.1) {
+      const ww = Math.min(0.9, d.len - 0.3), wh = 0.6, wy = h - 0.2 - wh / 2;
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), skyMaterial);
+      glass.position.copy(mesh.position).add(wall.normal.clone().multiplyScalar(0.004));
+      glass.position.y = wy;
+      glass.rotation.y = d.rotY;
+      const frameMat = mat("#f2f2f0", { roughness: 0.5 });
+      const frame = new THREE.Group();
+      for (const [fw, fh, x, y] of [[ww + 0.08, 0.04, 0, wh / 2 + 0.02], [ww + 0.08, 0.04, 0, -wh / 2 - 0.02], [0.04, wh, -ww / 2 - 0.02, 0], [0.04, wh, ww / 2 + 0.02, 0], [0.03, wh, 0, 0]]) {
+        const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.05), frameMat);
+        f.position.set(x, y, 0.025); f.castShadow = true; frame.add(f);
+      }
+      frame.position.copy(glass.position); frame.rotation.y = d.rotY;
+      roomGroup.add(glass, frame);
+      wall.extra.push(glass, frame);
+    }
     // zócalo de contorno para que se lea la esquina
     const edge = new THREE.Mesh(new THREE.BoxGeometry(d.len, 0.01, 0.01), new THREE.MeshBasicMaterial({ color: "#b9b4ab" }));
     edge.position.set(d.pos[0], 0.005, d.pos[2]);
@@ -773,6 +927,7 @@ function buildRoom() {
     roomGroup.add(gap, arc);
   }
   roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = planMode; });
+  applyLight();
   fitPlan();
 }
 
@@ -793,7 +948,12 @@ function updateWallVisibility() {
 }
 
 // ── Productos en 3D ──
-const loader = new GLTFLoader();
+// modelos comprimidos: geometría con Draco y texturas KTX2 (cargan rápido en el celular).
+// Las sombras horneadas en Blender (mapa de oclusión del .glb) las aplica el cargador solo.
+const THREE_CDN = "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/libs/";
+const loader = new GLTFLoader()
+  .setDRACOLoader(new DRACOLoader().setDecoderPath(`${THREE_CDN}draco/gltf/`))
+  .setKTX2Loader(new KTX2Loader().setTranscoderPath(`${THREE_CDN}basis/`).detectSupport(renderer));
 const modelCache = new Map();
 function loadModel(url) {
   if (!modelCache.has(url)) modelCache.set(url, loader.loadAsync(url).then((g) => g.scene));
@@ -812,7 +972,8 @@ function proxy(p, color) {
   const [w, h, d] = dimsOf(p);
   const g = new THREE.Group();
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
-  const ceramic = mat(color, { roughness: 0.15 });
+  // loza: cuerpo apenas satinado con esmalte vítreo encima (el reflejo nítido de un sanitario real)
+  const ceramic = new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: ENV_SOFT });
   const metal = mat(color, { metalness: 0.9, roughness: 0.25, envMapIntensity: 1 });
   const sub = (p.subcategory || "").toLowerCase();
   switch (p.category) {
@@ -893,7 +1054,7 @@ async function buildItem(item) {
       src.position.sub(new THREE.Vector3(center.x, box2.min.y, center.z));
       src.traverse((o) => {
         if (!o.isMesh) return;
-        o.castShadow = true;
+        o.castShadow = o.receiveShadow = true;
         o.material = o.material.clone();
         if (v?.color_hex && o.material.color) o.material.color.set(color);
       });
@@ -966,7 +1127,8 @@ const selBox = new THREE.BoxHelper(undefined, 0x2563eb);
 selBox.visible = false;
 scene.add(selBox);
 function updateSelectionBox() {
-  if (selected) { selBox.setFromObject(selected); selBox.visible = true; } else selBox.visible = false;
+  // en calidad Alta el elegido lleva contorno (OutlinePass); en Básica y en planta, la caja
+  if (selected && !usePost()) { selBox.setFromObject(selected); selBox.visible = true; } else selBox.visible = false;
 }
 
 async function addProduct(p, variantId) {
@@ -1011,11 +1173,24 @@ function hitItem() {
   while (o.parent && o.parent !== itemsGroup) o = o.parent;
   return o;
 }
+// en planta: ¿el puntero está sobre una pared? (para cambiar la medida arrastrándola)
+const WALL_GRAB = 0.15; // metros alrededor de la línea de la pared
+function wallAt() {
+  const p = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
+  if (!p) return null;
+  const { w, l } = state.room;
+  if (Math.abs(Math.abs(p.x) - w / 2) < WALL_GRAB && Math.abs(p.z) < l / 2 + WALL_GRAB) return "x";
+  if (Math.abs(Math.abs(p.z) - l / 2) < WALL_GRAB && Math.abs(p.x) < w / 2 + WALL_GRAB) return "z";
+  return null;
+}
+let wallDrag = null; // "x" (ancho) | "z" (largo)
 let downAt = null;
 renderer.domElement.addEventListener("pointerdown", (e) => {
+  if (photoOn) return; // durante la foto realista solo se gira la cámara
   setPtr(e);
   downAt = { x: e.clientX, y: e.clientY };
   const obj = hitItem();
+  if (!obj && planMode && (wallDrag = wallAt())) { renderer.domElement.setPointerCapture(e.pointerId); return; }
   if (!obj) return; // vacío: OrbitControls gira la cámara; deselecciona al soltar si no hubo arrastre
   select(obj);
   const it = obj.userData.item;
@@ -1029,6 +1204,21 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 renderer.domElement.addEventListener("pointermove", (e) => {
+  if (planMode && !drag) {
+    setPtr(e);
+    if (wallDrag) {
+      // la habitación está centrada: la pared que se arrastra y la opuesta se mueven igual (medida = 2 × distancia)
+      const p = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
+      if (!p) return;
+      const key = wallDrag === "x" ? "w" : "l";
+      const v = Math.round(THREE.MathUtils.clamp(Math.abs(wallDrag === "x" ? p.x : p.z) * 2, 0.8, 8) * 20) / 20; // cada 5 cm
+      if (v !== state.room[key]) { state.room[key] = v; state.room.preset = null; renderRoomForm(); buildRoom(); itemsGroup.children.forEach(placeObject); }
+      return;
+    }
+    const over = !hitItem() && wallAt();
+    stage.classList.toggle("resize-x", over === "x"); stage.classList.toggle("resize-z", over === "z");
+    return;
+  }
   if (!drag) return;
   setPtr(e);
   const hit = ray.ray.intersectPlane(drag.plane, new THREE.Vector3());
@@ -1044,6 +1234,7 @@ renderer.domElement.addEventListener("pointermove", (e) => {
   updateSelectionBox();
 });
 const endDrag = (e) => {
+  if (wallDrag) { wallDrag = null; downAt = null; roomChanged(); flash(`Baño de ${roomLabel()}`); return; }
   if (drag) { drag = null; controls.enabled = !planMode; persist(); return; }
   if (downAt && e && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) select(null);
   downAt = null;
@@ -1180,6 +1371,61 @@ $("templates").addEventListener("click", (e) => {
   const b = e.target.closest("[data-tpl]");
   if (b) applyTemplate(b.dataset.tpl);
 });
+
+// ── Estilos listos (como los ambientes de Roca): piso, paredes y color de la grifería, con lo que hay en stock ──
+// Se buscan por palabras en el nombre, la subcategoría y el color; un estilo sin cerámica que le sirva no aparece.
+const STYLES = [
+  { id: "blanco", name: "Blanco moderno", floor: /porcelanato|gris claro|blanc/i, wall: /blanc|subway|liso/i, metal: "#c8ccd0", light: "dia" },
+  { id: "madera", name: "Madera cálida", floor: /madera/i, wall: /beige|crema|arena|hueso|blanc/i, metal: "#1f1f1f", light: "tarde" },
+  { id: "marmol", name: "Mármol", floor: /m[aá]rmol|carrara|calacatta|marquina/i, wall: /m[aá]rmol|carrara|calacatta|blanc/i, metal: "#c9a86a", light: "dia" },
+  { id: "industrial", name: "Industrial", floor: /cemento|piedra|gris/i, wall: /cemento|gris|subway|ladrillo/i, metal: "#1f1f1f", light: "tarde" },
+  { id: "clasico", name: "Clásico", floor: /hidr[aá]ulic|geom[eé]tric/i, wall: /subway|blanc|bisel/i, metal: "#c8ccd0", light: "dia" },
+];
+const METAL_CATS = ["griferia", "duchas", "accesorios"];
+// la cerámica del estilo para piso o pared: primero la que tiene textura real (foto de la pieza)
+function styleTile(re, use, skip) {
+  const ok = (p) => p.placement === "surface" && p.unit === "m2" && p.available && (p.surface_use === "both" || p.surface_use === use) && p.id !== skip;
+  let best = null;
+  for (const p of products) {
+    if (!ok(p)) continue;
+    for (const v of p.inStock) {
+      if (!re.test(`${p.name} ${p.subcategory || ""} ${v.name || ""}`)) continue;
+      if (v.texture) return { productId: p.id, variantId: v.id };
+      best ||= { productId: p.id, variantId: v.id };
+    }
+  }
+  return best;
+}
+function stylePicks(s) {
+  const floor = styleTile(s.floor, "floor");
+  return floor && { floor, wall: styleTile(s.wall, "wall", floor.productId) };
+}
+function renderStyles() {
+  const img = (sel) => { const p = sel && byId(sel.productId); return p ? tileImg(p, variantOf(p, sel.variantId)) : ""; };
+  const html = STYLES.map((s) => {
+    const k = stylePicks(s);
+    return k ? `<button class="style-card" type="button" data-style="${s.id}"><span class="sw2"><img src="${esc(img(k.floor))}" alt=""><img src="${esc(img(k.wall) || img(k.floor))}" alt=""></span><b>${s.name}</b></button>` : "";
+  }).join("");
+  $("styles").innerHTML = html;
+  $("stylesBox").hidden = !html;
+}
+async function applyStyle(id) {
+  const s = STYLES.find((x) => x.id === id), k = s && stylePicks(s);
+  if (!k) return;
+  state.floor = k.floor;
+  if (k.wall) state.wall = k.wall;
+  state.walls = {};
+  for (const it of state.items) {
+    const p = byId(it.productId);
+    if (p && METAL_CATS.includes(p.category)) it.variantId = nearestVariant(p, s.metal)?.id ?? it.variantId;
+  }
+  state.light.mode = s.light;
+  renderTileSelects(); renderLightPanel();
+  buildRoom(); await rebuildItems(); updateWallVisibility();
+  persist(); renderSummary();
+  flash(`Estilo ${s.name}`);
+}
+$("styles").addEventListener("click", (e) => { const b = e.target.closest("[data-style]"); if (b) applyStyle(b.dataset.style); });
 for (const id of ["rw", "rl", "rh"]) $(id).addEventListener("change", () => {
   const val = (x, lo, hi) => THREE.MathUtils.clamp(Number(x) || lo, lo, hi);
   Object.assign(state.room, { w: val($("rw").value, 0.8, 8), l: val($("rl").value, 0.8, 8), h: val($("rh").value, 2, 4), preset: null });
@@ -1554,7 +1800,9 @@ function setView(plan) {
   roomGroup.children.forEach((o) => { if (o.userData.planOnly) o.visible = plan; });
   itemsGroup.traverse((o) => { if (o.userData.planOnly) o.visible = plan; });
   if (!plan) $("labels").innerHTML = "";
+  stage.classList.remove("resize-x", "resize-z");
   updateWallVisibility();
+  updateSelectionBox();
 }
 $("view3d").onclick = () => setView(false);
 $("viewPlan").onclick = () => setView(true);
@@ -1589,17 +1837,168 @@ function flash(msg) {
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => (h.hidden = true), 2500);
 }
-renderer.setAnimationLoop(() => {
+// Auto: mide los primeros segundos; si el 3D va lento en Alta, baja a Básica y avisa
+let fpsProbe = null; // { t0, frames }
+const startFpsProbe = () => { fpsProbe = qualityPref === "auto" && quality === "alta" ? { t0: 0, frames: 0 } : null; };
+function checkFps(now) {
+  if (!fpsProbe || document.hidden) return;
+  if (!fpsProbe.t0) { fpsProbe.t0 = now; return; }
+  fpsProbe.frames++;
+  const ms = now - fpsProbe.t0;
+  if (ms < 2500) return;
+  if (fpsProbe.frames / (ms / 1000) < 24) setQuality("basica", "Para que el 3D se mueva fluido en este equipo, bajamos la calidad. Puedes subirla en ☀ Luz.");
+  fpsProbe = null;
+}
+renderer.setAnimationLoop((now) => {
+  if (photoOn) { photoFrame(); return; }
   if (!planMode) controls.update();
   else updateLabels();
   updateWallVisibility();
   if (selected && drag) updateSelectionBox();
-  renderer.render(scene, camera);
+  draw();
+  checkFps(now);
 });
+
+// ── Aviso en la esquina ──
+let toastTimer;
+function toast(title, msg) {
+  const t = $("toast");
+  t.innerHTML = `<b>${esc(title)}</b>${esc(msg)}`; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), 7000);
+}
+$("toast").onclick = () => ($("toast").hidden = true);
+
+// ── Panel de luz y calidad ──
+function renderLightPanel() {
+  const L = state.light;
+  document.querySelectorAll("#lightMode button").forEach((b) => b.classList.toggle("active", b.dataset.v === L.mode));
+  document.querySelectorAll("#qualSeg button").forEach((b) => b.classList.toggle("active", b.dataset.v === qualityPref));
+  $("lightK").value = L.k; $("windowChk").checked = !!L.window;
+  $("qualNote").textContent = qualityPref === "auto" ? `Ahora: ${quality === "alta" ? "Alta" : "Básica"}, según este equipo.` : "";
+}
+$("lightBtn").onclick = () => { $("lightPanel").hidden = !$("lightPanel").hidden; $("lightBtn").classList.toggle("active", !$("lightPanel").hidden); renderLightPanel(); };
+$("lightMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; state.light.mode = b.dataset.v; applyLight(); renderLightPanel(); persist(); };
+$("lightK").oninput = (e) => { state.light.k = Number(e.target.value); applyLight(); persist(); };
+$("windowChk").onchange = (e) => { state.light.window = e.target.checked; buildRoom(); updateWallVisibility(); persist(); };
+$("qualSeg").onclick = (e) => {
+  const b = e.target.closest("[data-v]"); if (!b) return;
+  qualityPref = b.dataset.v;
+  try { localStorage.setItem("lambert_calidad", qualityPref); } catch { /* sin almacenamiento */ }
+  setQuality(qualityPref === "auto" ? (WEAK_GPU ? "basica" : "alta") : qualityPref);
+  updateSelectionBox(); startFpsProbe();
+};
+
+// ── Imagen HD: el 3D actual a 2560 px de ancho, para descargar o enviar ──
+function hdImage(width = 2560) {
+  if (planMode) setView(false);
+  const { clientWidth: cw, clientHeight: ch } = stage;
+  const ratio = renderer.getPixelRatio();
+  const h = Math.round(width * ch / Math.max(cw, 1));
+  updateWallVisibility();
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, h, false);
+  composer.setPixelRatio(1); composer.setSize(width, h);
+  persp.aspect = width / h; persp.updateProjectionMatrix();
+  draw();
+  const url = renderer.domElement.toDataURL("image/jpeg", 0.92);
+  renderer.setPixelRatio(ratio);
+  resize();
+  draw();
+  return url;
+}
+const fileName = () => `bano-${state.room.w}x${state.room.l}${savedCode ? `-${savedCode}` : ""}.jpg`;
+function downloadImage(url) {
+  const a = Object.assign(document.createElement("a"), { href: url, download: fileName() });
+  document.body.append(a); a.click(); a.remove();
+}
+// en el celular abre "Compartir" (WhatsApp con la foto); en el computador la descarga
+async function shareImage(url) {
+  try {
+    const blob = await (await fetch(url)).blob();
+    const file = new File([blob], fileName(), { type: "image/jpeg" });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text: `Mi baño en ${C.storeName}` }); return; }
+  } catch (e) { if (e?.name === "AbortError") return; }
+  downloadImage(url);
+  flash("Imagen descargada: adjúntala en WhatsApp");
+}
+$("hdBtn").onclick = () => { lastPhoto = hdImage(); downloadImage(lastPhoto); };
+
+// ── Foto realista: trazado de rayos en el navegador (three-gpu-pathtracer). La imagen se va afinando
+// mientras la cámara está quieta, como el "Premium Plus" de Roca. Si el equipo no puede, queda la imagen HD.
+let photoOn = false, pt = null, photoTarget = 0, lastPhoto = null;
+const PHOTO_SAMPLES = { alta: 400, basica: 150 };
+async function startPhoto() {
+  if (photoOn) return;
+  if (planMode) setView(false);
+  select(null);
+  $("lightPanel").hidden = true; $("lightBtn").classList.remove("active");
+  document.body.classList.add("photo");
+  $("photoBar").hidden = false; $("photoSave").hidden = $("photoShare").hidden = true;
+  $("photoLbl").textContent = "Preparando la foto…"; $("photoProg").style.width = "0";
+  // en tarjetas de video viejas o sin tarjeta, el trazado de rayos congela la página: ahí va la imagen HD
+  // (?foto=forzar lo intenta igual, para probar)
+  if (WEAK_GPU && qs.get("foto") !== "forzar") {
+    document.body.classList.remove("photo");
+    lastPhoto = hdImage();
+    showPhotoDone("Imagen HD lista (la foto realista necesita un equipo más nuevo).");
+    return;
+  }
+  try {
+    const { WebGLPathTracer } = await import("three-gpu-pathtracer");
+    if (!pt) {
+      pt = new WebGLPathTracer(renderer);
+      const n = WEAK_GPU ? 4 : quality === "alta" ? 2 : 3;
+      pt.tiles.set(n, n); // trozos más chicos por cuadro: no congela equipos lentos
+      Object.assign(pt, { minSamples: 1, fadeDuration: 300, filterGlossyFactor: 0.5, dynamicLowRes: true, renderScale: quality === "alta" ? 1 : 0.6 });
+      pt.bounces = 6;
+    }
+    updateWallVisibility();
+    selBox.visible = false;
+    if (envHdr) scene.environment = envHdr;
+    photoTarget = PHOTO_SAMPLES[quality];
+    await new Promise((r) => setTimeout(r, 30)); // que se alcance a ver "Preparando…"
+    pt.setScene(scene, persp);
+    photoOn = true;
+    controls.addEventListener("change", photoMoved);
+  } catch (e) {
+    console.error(e);
+    stopPhoto();
+    lastPhoto = hdImage();
+    showPhotoDone("Este equipo no puede hacer la foto realista: te dejamos la imagen HD.");
+  }
+}
+function photoMoved() { if (!pt) return; updateWallVisibility(); pt.setScene(scene, persp); $("photoSave").hidden = $("photoShare").hidden = true; }
+function photoFrame() {
+  controls.update();
+  try { if (pt.samples < photoTarget) pt.renderSample(); }
+  catch (e) { console.error(e); stopPhoto(); lastPhoto = hdImage(); showPhotoDone("Este equipo no puede hacer la foto realista: te dejamos la imagen HD."); return; }
+  const k = Math.min(1, pt.samples / photoTarget);
+  $("photoProg").style.width = `${Math.round(k * 100)}%`;
+  if (k < 1) { $("photoLbl").textContent = `Afinando la foto… ${Math.round(k * 100)} %`; return; }
+  if ($("photoSave").hidden) { lastPhoto = renderer.domElement.toDataURL("image/jpeg", 0.92); showPhotoDone("¡Lista! Gírala y se vuelve a afinar."); }
+}
+function showPhotoDone(msg) {
+  $("photoBar").hidden = false;
+  $("photoLbl").textContent = msg; $("photoProg").style.width = "100%";
+  $("photoSave").hidden = $("photoShare").hidden = !lastPhoto;
+}
+function stopPhoto() {
+  photoOn = false;
+  controls.removeEventListener("change", photoMoved);
+  scene.environment = envPmrem;
+  document.body.classList.remove("photo");
+  $("photoBar").hidden = true;
+  updateSelectionBox();
+}
+$("photoBtn").onclick = startPhoto;
+$("photoClose").onclick = stopPhoto;
+$("photoSave").onclick = () => lastPhoto && downloadImage(lastPhoto);
+$("photoShare").onclick = () => lastPhoto && shareImage(lastPhoto);
 
 // ── Inicio ──
 async function init() {
-  resize();
+  setQuality(quality);
   renderRoomForm();
   buildRoom();
   frameCamera();
@@ -1631,6 +2030,7 @@ async function init() {
   for (const [k, v] of Object.entries(state.walls)) if (v?.productId && !byId(v.productId)) delete state.walls[k];
   renderTileSelects();
   renderProducts();
+  renderStyles();
   buildRoom();
   await rebuildItems();
   renderSummary();
@@ -1660,7 +2060,8 @@ async function init() {
   if (!state.items.length && !toAdd && !qs.get("d")) flash("Elige un baño de muestra o escribe tus medidas");
   if (state.items.length && toAdd?.placement !== "surface") showStep(3);
   // primer cuadro de inmediato (sin esperar al bucle de animación)
-  controls.update(); updateWallVisibility(); renderer.render(scene, camera);
+  controls.update(); updateWallVisibility(); draw();
+  startFpsProbe();
 }
 // ── Pasos ──
 let step = 1;
@@ -1688,7 +2089,7 @@ async function saveDesign() {
   if (!state.items.length && !state.floor && !state.wall) { st("Agrega algo a tu baño antes de guardarlo.", "err"); return null; }
   $("saveBtn").disabled = true; st("Guardando…");
   const phone = phoneValue("cPhone");
-  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false, install: state.install };
+  const data = { v: 1, room: state.room, floor: state.floor, wall: state.wall, walls: state.walls, items: state.items, supplies: state.supplies !== false, install: state.install, light: state.light };
   const { data: code, error } = await db.rpc("save_design", {
     p_store: C.storeId, p_data: data, p_total: Math.round(lastTotal), p_name: $("cName").value.trim(),
     p_phone: phone ? `+${phone.dial} ${phone.number}` : "", p_source: KIOSK ? "tienda" : "web",
@@ -1737,10 +2138,11 @@ function captureViews() {
   // si el 3D no se ve (la página ya está en modo impresión), se usa la última captura buena
   if (renderer.domElement.width < 50 || renderer.domElement.height < 50) return lastViews || ["", ""];
   const wasPlan = planMode;
-  const shot = (plan) => { setView(plan); if (!plan) { controls.update(); updateWallVisibility(); } renderer.render(scene, camera); return renderer.domElement.toDataURL("image/jpeg", 0.9); };
+  const shot = (plan) => { setView(plan); if (!plan) { controls.update(); updateWallVisibility(); } draw(); return renderer.domElement.toDataURL("image/jpeg", 0.9); };
   const views = [shot(false), shot(true)];
   setView(wasPlan);
-  renderer.render(scene, camera);
+  draw();
+  if (lastPhoto) views[0] = lastPhoto; // si sacó la foto realista, esa va en el presupuesto
   if (views.every((v) => v.length > 2000)) lastViews = views;
   return lastViews || views;
 }
@@ -1819,10 +2221,10 @@ $("suppliesChk").addEventListener("change", (e) => { state.supplies = e.target.c
 
 async function loadDesign(data) {
   Object.assign(state, emptyState(), { room: { ...emptyState().room, ...data.room }, floor: data.floor, wall: data.wall, walls: data.walls || {}, items: data.items || [], supplies: data.supplies !== false,
-    install: { qty: {}, off: [], extra: [], ...(data.install || {}) } });
+    install: { qty: {}, off: [], extra: [], ...(data.install || {}) }, light: { ...emptyState().light, ...(data.light || {}) } });
   state.items = state.items.filter((it) => byId(it.productId));
   select(null);
-  renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
+  renderRoomForm(); renderTileSelects(); renderLightPanel(); buildRoom(); await rebuildItems();
   frameCamera(); renderSummary();
 }
 async function openCode(raw) {
@@ -1857,7 +2259,7 @@ async function resetAll() {
   $("cName").value = ""; $("cPhone").value = ""; $("saveStatus").textContent = ""; $("waQrArea").innerHTML = "";
   select(null);
   setView(false);
-  renderRoomForm(); renderTileSelects(); buildRoom(); await rebuildItems();
+  renderRoomForm(); renderTileSelects(); renderLightPanel(); buildRoom(); await rebuildItems();
   frameCamera(); persist(); renderSummary(); showStep(1);
 }
 $("resetBtn").onclick = () => { if (confirm("¿Borrar este diseño y empezar de nuevo?")) resetAll(); };

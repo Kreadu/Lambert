@@ -117,6 +117,17 @@
   .sel .pill{cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface)}
   .sel .pill.active{border-color:var(--text-primary);font-weight:600}
   .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;font-size:13px;padding:6px 14px;border-radius:999px;pointer-events:none;white-space:nowrap;z-index:3}
+  /* marcadores de zona sobre el 3D (paso 2): tocar para elegir piso, paredes o franja */
+  .zpin{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.92);color:#222;border:1px solid rgba(0,0,0,.15);border-radius:999px;padding:5px 11px 5px 7px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .zpin::before{content:"";width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #9a7b5a;box-shadow:0 0 0 3px rgba(154,123,90,.25);animation:zpulse 2s ease-in-out infinite}
+  .zpin.active{background:#222;color:#fff}.zpin.active::before{border-color:#fff}
+  @keyframes zpulse{50%{box-shadow:0 0 0 7px rgba(154,123,90,0)}}
+  @media (prefers-reduced-motion:reduce){.zpin::before{animation:none}}
+  body.kiosk .zpin{font-size:16px;padding:8px 14px 8px 10px}
+  .intro-steps{list-style:none;margin:6px 0 14px;padding:0;display:grid;gap:10px}
+  .intro-steps li{display:flex;gap:12px;align-items:flex-start}
+  .intro-steps b.n{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--text-primary);color:var(--surface);display:grid;place-items:center;font-size:14px}
+  .surf-next{margin-top:6px}
   .dimlabel{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;font-weight:600;pointer-events:none;font-variant-numeric:tabular-nums;z-index:2}
   .summary-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)}
   .summary-row span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -276,7 +287,7 @@
         <div class="surf-also" id="surfAlso"></div>
         <select class="input" id="tileTypes" aria-label="Tipo de cerámica" style="margin-bottom:8px"></select>
         <div class="tile-grid" id="tileGrid"></div>
-        <p class="muted">Se dibuja a escala real según el tamaño de la pieza. Solo aparecen colores con stock.</p>
+        <p class="muted">Toca el piso o una pared en el baño para cambiarle la cerámica. Se dibuja a escala real según el tamaño de la pieza y solo aparecen colores con stock. Los colores y texturas en pantalla son orientativos.</p>
       </section>
 
       <section class="pane" id="pane3">
@@ -292,7 +303,7 @@
         <h3>Tu selección</h3>
         <label class="row" id="suppliesRow" style="font-size:14px;margin-bottom:8px" hidden><input type="checkbox" id="suppliesChk" checked> Incluir pegante y boquilla</label>
         <div id="summary"></div>
-        <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Pegante y boquilla son cantidades aproximadas. Precios sujetos a cambio.</p>
+        <p class="muted" style="margin-top:8px">La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Pegante y boquilla son cantidades aproximadas. Precios sujetos a cambio. Los colores y texturas en pantalla son orientativos: confírmalos con la pieza en la tienda.</p>
         <label class="row" id="demoRow" style="font-size:14px;margin-top:12px" hidden><input type="checkbox" id="demoChk"> Hay que retirar la cerámica vieja</label>
         <div id="plan"></div>
         <div id="saveArea" style="margin-top:14px">
@@ -352,6 +363,11 @@
       <button class="icon-btn" id="zoomFit" type="button" title="Ver todo el baño" aria-label="Ver todo el baño">⤢</button>
     </div>
     <div id="labels"></div>
+    <div id="zpins" hidden>
+      <button type="button" class="zpin" data-pin="floor">Piso</button>
+      <button type="button" class="zpin" data-pin="wall">Paredes</button>
+      <button type="button" class="zpin" data-pin="band" hidden>Franja</button>
+    </div>
     <div class="exp-total" id="expTotal"></div>
     <div class="hint" id="hint" hidden></div>
     <div class="hud"><div class="sel" id="sel" hidden></div></div>
@@ -362,6 +378,16 @@
   <h2 style="font-size:18px;margin-bottom:6px">¿Sigues ahí?</h2>
   <p class="muted">En <b id="idleSec">20</b> segundos empezamos un diseño nuevo para el siguiente cliente.</p>
   <button class="btn btn-primary" id="idleStay" type="button" style="margin-top:12px;width:100%">Sigo diseñando</button>
+</div></div>
+
+<div class="overlay" id="introDlg"><div class="modal" style="max-width:400px">
+  <div class="modal-head"><span class="modal-title">Diseña tu baño en 3 pasos</span><button class="icon-btn" id="introClose" aria-label="Cerrar">✕</button></div>
+  <ol class="intro-steps">
+    <li><b class="n">1</b><span><b>Elige tu baño</b><br><span class="muted">Un baño de muestra o tus propias medidas.</span></span></li>
+    <li><b class="n">2</b><span><b>Toca el piso o una pared</b><br><span class="muted">Y elige la cerámica que te gusta.</span></span></li>
+    <li><b class="n">3</b><span><b>Agrega tus productos</b><br><span class="muted">Sanitario, lavamanos, ducha… y mira cuánto cuesta todo.</span></span></li>
+  </ol>
+  <button class="btn btn-primary" id="introGo" type="button" style="width:100%">Empezar</button>
 </div></div>
 
 <div class="overlay" id="codeDlg"><div class="modal" style="max-width:380px">
@@ -1009,6 +1035,7 @@ function buildRoom() {
       strip.position.y = state.band.y;
       strip.rotation.y = d.rotY;
       strip.receiveShadow = true;
+      strip.userData.band = true;
       roomGroup.add(strip);
       wall.extra.push(strip);
     }
@@ -1344,6 +1371,26 @@ function wallAt() {
   if (Math.abs(Math.abs(p.z) - l / 2) < WALL_GRAB && Math.abs(p.x) < w / 2 + WALL_GRAB) return "z";
   return null;
 }
+// ¿qué superficie del baño está bajo el puntero? → "floor" | "band" | lado de la pared
+function surfaceAt() {
+  const hits = ray.intersectObjects(roomGroup.children.filter((o) => o.visible && o.isMesh), false);
+  for (const h of hits) {
+    const u = h.object.userData;
+    if (u.isFloor) return "floor";
+    if (u.band) return "band";
+    if (u.wall) return u.wall;
+    if (u.planOnly) continue;
+    return null; // puerta, ventana: no es cerámica
+  }
+  return null;
+}
+function openSurface(z) {
+  // una pared con su propia cerámica se abre sola; si no, se cambian todas las paredes juntas
+  surf = z === "floor" || z === "band" ? z : (state.walls?.[z] ? z : "wall");
+  if (step !== 2) showStep(2);
+  renderTileSelects();
+  flash(surf === "floor" ? "Elige la cerámica del piso" : surf === "band" ? "Elige el listelo de la franja" : surf === "wall" ? "Elige la cerámica de las paredes" : `Elige la cerámica de la ${SIDE_LABEL[surf].toLowerCase()}`);
+}
 let wallDrag = null; // "x" (ancho) | "z" (largo)
 let downAt = null;
 renderer.domElement.addEventListener("pointerdown", (e) => {
@@ -1405,7 +1452,11 @@ renderer.domElement.addEventListener("pointermove", (e) => {
 const endDrag = (e) => {
   if (wallDrag) { wallDrag = null; downAt = null; roomChanged(); flash(`Baño de ${roomLabel()}`); return; }
   if (drag) { drag = null; controls.enabled = !planMode; persist(); return; }
-  if (downAt && e && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) select(null);
+  if (downAt && e && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 5) {
+    // un toque (sin arrastrar): si había algo elegido se suelta; si no, el piso o la pared tocados abren su cerámica
+    if (selected) select(null);
+    else if (!planMode) { setPtr(e); const z = surfaceAt(); if (z) openSurface(z); }
+  }
   downAt = null;
 };
 renderer.domElement.addEventListener("pointerup", endDrag);
@@ -1671,7 +1722,8 @@ function renderTileSelects() {
     : `<span><b>${where}</b><br><span class="muted">${surf === "band" ? "Sin franja · elige un listelo abajo" : "Sin cerámica · elige una abajo"}</span></span>${!isMainSurf() ? `<button class="btn" type="button" data-clear>Igual que las demás</button>` : ""}`;
   // la misma cerámica en la otra superficie, de un toque
   const also = p && p.surface_use === "both" && (surf === "floor" || surf === "wall") && selKey(surf === "floor" ? state.wall : state.floor) !== selKey(sel);
-  $("surfAlso").innerHTML = also ? `<button class="btn" type="button" data-also>${surf === "floor" ? "Usar también en las paredes" : "Usar también en el piso"}</button>` : "";
+  $("surfAlso").innerHTML = (also ? `<button class="btn" type="button" data-also>${surf === "floor" ? "Usar también en las paredes" : "Usar también en el piso"}</button>` : "") +
+    `<div class="surf-next"><button class="btn ${p || sel === undefined ? "btn-primary" : ""}" type="button" data-next>${p || sel === undefined ? "Siguiente" : "Saltar"}: ${esc(nextZone().label)} →</button></div>`;
   // filtros por tipo y galería
   const tiles = tilesFor();
   const types = [...new Set(tiles.map((t) => t.subcategory || "Otras"))].sort((a, b) => a.localeCompare(b, "es"));
@@ -1697,7 +1749,19 @@ $("tileGrid").addEventListener("click", (e) => {
   const [productId, variantId] = b.dataset.tile.split("|");
   setSel({ productId, variantId });
 });
+// después del piso vienen las paredes, luego la franja (si la tienda tiene listelos) y luego los productos
+function nextZone() {
+  const band = !$("bandTab").hidden;
+  if (surf === "floor") return { surf: "wall", label: "Paredes" };
+  if (surf !== "band" && band) return { surf: "band", label: "Franja decorativa" };
+  return { step: 3, label: "Productos" };
+}
 $("surfAlso").addEventListener("click", (e) => {
+  if (e.target.closest("[data-next]")) {
+    const n = nextZone();
+    if (n.step) showStep(n.step); else { surf = n.surf; renderTileSelects(); document.querySelector(".side-body").scrollTop = 0; }
+    return;
+  }
   if (e.target.closest("[data-also]")) {
     const sel = currentSel();
     if (surf === "floor") state.wall = { ...sel }; else state.floor = { ...sel };
@@ -2120,10 +2184,56 @@ renderer.setAnimationLoop((now) => {
   if (!planMode) controls.update();
   else updateLabels();
   updateWallVisibility();
+  updatePins();
   if (selected && drag) updateSelectionBox();
   draw();
   checkFps(now);
 });
+
+// ── Marcadores de zona (paso 2): sobre el piso, la pared que más se ve y la franja ──
+const pinEls = Object.fromEntries([...document.querySelectorAll("#zpins [data-pin]")].map((b) => [b.dataset.pin, b]));
+function updatePins() {
+  const box = $("zpins");
+  const show = step === 2 && !planMode && !photoOn && !drag;
+  box.hidden = !show;
+  if (!show) return;
+  const { h } = state.room;
+  // la pared más de frente a la cámara
+  let best = null, bestDot = -1;
+  for (const wl of walls) {
+    if (!wl.mesh.visible) continue;
+    const d = camera.position.clone().sub(wl.mesh.position).normalize().dot(wl.normal);
+    if (d > bestDot) { bestDot = d; best = wl; }
+  }
+  const n = notchOf(); // en un baño en L, el centro puede caer en el entrante
+  const at = { floor: new THREE.Vector3(0, 0, n ? -n.sz * n.l / 2 : 0) };
+  if (best) {
+    at.wall = best.mesh.position.clone().setY(h * 0.62).addScaledVector(best.along, -best.len * 0.18);
+    if (state.band && bandProduct()) at.band = best.mesh.position.clone().setY(state.band.y).addScaledVector(best.along, best.len * 0.22);
+  }
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const cur = surf === "floor" || surf === "band" ? surf : "wall";
+  for (const [k, el] of Object.entries(pinEls)) {
+    const p = at[k];
+    if (k === "band") el.textContent = state.band && bandProduct() ? "Franja" : "";
+    const v = p && p.clone().project(camera);
+    const ok = v && v.z < 1 && Math.abs(v.x) < 0.95 && Math.abs(v.y) < 0.95;
+    el.hidden = !ok;
+    if (!ok) continue;
+    el.style.left = `${(v.x + 1) / 2 * W}px`; el.style.top = `${(1 - v.y) / 2 * H}px`;
+    el.classList.toggle("active", k === cur);
+  }
+}
+$("zpins").addEventListener("click", (e) => { const b = e.target.closest("[data-pin]"); if (b) openSurface(b.dataset.pin); });
+
+// ── Cartel de bienvenida (una vez por navegador; no en las pruebas automáticas) ──
+(() => {
+  let seen = false;
+  try { seen = localStorage.getItem("lambert_intro") === "1"; } catch { /* sin almacenamiento */ }
+  const close = () => { $("introDlg").classList.remove("open"); try { localStorage.setItem("lambert_intro", "1"); } catch { /* nada */ } };
+  $("introGo").onclick = close; $("introClose").onclick = close;
+  if (!seen && !navigator.webdriver) $("introDlg").classList.add("open");
+})();
 
 // ── Aviso en la esquina ──
 let toastTimer;
@@ -2481,6 +2591,7 @@ function renderQuoteDoc() {
       <div class="q-notes">
         <p>La cerámica incluye 10 % de desperdicio y se vende por cajas completas. Las cantidades de pegante y boquilla son aproximadas.</p>
         <p>Precios en ${esc(C.currency)}, sujetos a disponibilidad de inventario.</p>
+        <p>Las imágenes son orientativas: los colores y texturas reales de cada pieza pueden variar.</p>
         ${s.quote_notes ? `<p>${esc(s.quote_notes).replace(/\n/g, "<br>")}</p>` : ""}
       </div>
       ${qr ? `<div class="q-qr"><img src="${qr}" alt=""><div>Abre este diseño<br><b>${esc(savedCode)}</b></div></div>` : ""}

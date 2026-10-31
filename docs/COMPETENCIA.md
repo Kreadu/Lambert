@@ -155,8 +155,8 @@ cada uno con 9–82 variantes. No es 3D: es **una foto renderizada** con marcado
 | Idea | Estado |
 |---|---|
 | **Ambientes fotorrealistas** sin tarjeta de video: fotos de baños con cada zona marcada (piso, pared, franja) y la cerámica elegida puesta en perspectiva sobre la foto, con las sombras de la foto encima. Se ve como foto en cualquier equipo (resuelve que la "Foto realista" se congele en equipos viejos) | Propuesta |
-| Marcadores sobre la vista para elegir zona (tocar la pared o el piso en lugar de buscar la pestaña) | Propuesta |
-| Cartel de 3 pasos la primera vez que se abre el diseñador | Propuesta |
-| "Siguiente zona" después de elegir cerámica (piso → paredes → franja) | Propuesta |
-| Aviso "Los colores y texturas son orientativos" en el diseñador y la cotización | Propuesta |
+| Marcadores sobre la vista para elegir zona (tocar la pared o el piso en lugar de buscar la pestaña) | **Hecho**: en el paso 2 hay marcadores Piso/Paredes/Franja sobre el 3D, y tocar el piso o una pared (sin arrastrar) abre su cerámica desde cualquier paso |
+| Cartel de 3 pasos la primera vez que se abre el diseñador | **Hecho** (una vez por navegador) |
+| "Siguiente zona" después de elegir cerámica (piso → paredes → franja) | **Hecho**: "Siguiente: Paredes →", o "Saltar" si no se eligió nada |
+| Aviso "Los colores y texturas son orientativos" en el diseñador y la cotización | **Hecho**: paso 2, Resumen y cotización impresa |
 | Filtro por tipo/serie de material | Ya existe (filtro por subcategoría) |

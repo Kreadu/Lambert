@@ -1,5 +1,13 @@
 # Lambert · plan del catálogo y diseñador de baños
 
+## Lo que se quiere (no perderlo de vista)
+1. **Que el cliente vea su baño real** antes de comprar: con su cerámica y sus productos, lo más parecido a una foto.
+   Hoy el 3D gusta; **lo que más falta es realismo**.
+2. **Fácil de usar** para cualquier cliente, sin explicaciones: tocar, elegir y ver.
+3. Que termine en una **venta**: solo productos con stock, cantidades y presupuesto reales de la tienda.
+
+Antes de agregar algo, preguntar: ¿ayuda a ver el baño más real, lo hace más fácil o ayuda a vender? Si no, va después.
+
 ## Visión
 Catálogo de productos de baño (cerámica, sanitarios, lavamanos, duchas, grifería, muebles, espejos, tinas,
 accesorios) que el usuario carga con todo su detalle. Desde el catálogo, el cliente pasa a un **diseñador 3D**
@@ -36,7 +44,9 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   (`012-sedes.sql`, **aplicada en la nube**; pestaña 🏬 Sedes en el admin). Pruebas: 18 (correr por archivo, el
   diseñador tarda ~12 min; si el puerto 8091 queda ocupado, cerrar ese `python3`).
 - **Pendiente para la próxima:**
-  - Porcelanosa analizado el 2026-10-31 (SPACES 2.0 en `porcelanosa.com/configurador`): elegir cuáles de las ideas nuevas de `docs/COMPETENCIA.md` hacer (ambientes fotorrealistas, marcadores de zona, cartel de 3 pasos…).
+  - **Lo principal: más realismo** (ver "Lo que se quiere"). La idea más fuerte son los **ambientes fotorrealistas**
+    de `docs/COMPETENCIA.md` (Porcelanosa SPACES 2.0). El 2026-10-31 se hicieron las ideas fáciles: marcadores de zona,
+    tocar el piso o la pared para cambiar la cerámica, cartel de 3 pasos, "Siguiente zona" y el aviso de colores orientativos.
   - Datos del catálogo (los arregla el usuario en el admin): quitar la textura de baldosa al Porcelanato liso Blanco,
     pasarla del Geométrico gris al Floral azul, y subir las fotos de CER-001, CER-002 y CER-013.
   - Probar la "Foto realista" en un equipo con tarjeta de video moderna (`?foto=forzar`).

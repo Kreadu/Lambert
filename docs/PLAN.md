@@ -36,7 +36,7 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   (`012-sedes.sql`, **aplicada en la nube**; pestaña 🏬 Sedes en el admin). Pruebas: 18 (correr por archivo, el
   diseñador tarda ~12 min; si el puerto 8091 queda ocupado, cerrar ese `python3`).
 - **Pendiente para la próxima:**
-  - Volver a analizar Porcelanosa (`spaces.porcelanosa.com` estaba caído). Planner 5D pide cuenta; HomeByMe sin demo.
+  - Porcelanosa analizado el 2026-10-31 (SPACES 2.0 en `porcelanosa.com/configurador`): elegir cuáles de las ideas nuevas de `docs/COMPETENCIA.md` hacer (ambientes fotorrealistas, marcadores de zona, cartel de 3 pasos…).
   - Datos del catálogo (los arregla el usuario en el admin): quitar la textura de baldosa al Porcelanato liso Blanco,
     pasarla del Geométrico gris al Floral azul, y subir las fotos de CER-001, CER-002 y CER-013.
   - Probar la "Foto realista" en un equipo con tarjeta de video moderna (`?foto=forzar`).

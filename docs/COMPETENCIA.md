@@ -118,7 +118,8 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 
 ## Porcelanosa, Corona y Sodimac/Homecenter (analizados con agent-browser, 2026-10-28)
 
-- **Porcelanosa**: "Diseña tu espacio" lleva a `spaces.porcelanosa.com`, que respondía *Server Unavailable* (CO y ES). Su "Visita 360°" en Colombia da error. Volver a intentar más adelante.
+- **Porcelanosa**: `spaces.porcelanosa.com` sigue caído (2026-10-31), pero "Diseña tu espacio → Empieza ahora" ahora lleva a
+  **SPACES 2.0 "IA Tool Design"** (`porcelanosa.com/configurador`). Ver la sección de abajo.
 - **Corona** (`corona.co/simulador-de-ambientes`, hecho por Mudi con **krpano**): eliges el ambiente (Baño principal, Baño social…) y el estilo
   (Moderno, Clásico contemporáneo, Rústico natural). Abre un **panorama 360° prerenderizado**, donde cada producto es una capa de foto.
   Se ve realista, pero las medidas son fijas, solo trae productos de Corona y no da cantidades. Menú: Pisos, Paredes, **Decorados**
@@ -135,3 +136,27 @@ Pide cuenta (Google/Apple/correo) antes del editor. No analizado.
 | Listelo / franja decorativa en la pared (los "Decorados" de Corona) | **Hecho**: pestaña "Franja" en el paso 2, altura ajustable, se corta en puerta y ventana, se cotiza por piezas |
 | Agregar todo el diseño al carrito de la tienda en un clic | Cuando haya tienda en línea |
 | Precio y stock según la sede elegida | **Hecho**: `supabase/012-sedes.sql`, pestaña 🏬 Sedes en el admin, "Comprando en…" en el catálogo y el diseñador |
+
+## Porcelanosa SPACES 2.0 (analizado con agent-browser, 2026-10-31)
+
+`porcelanosa.com/configurador`: ~25 **ambientes fotorrealistas** (baño, cocina, terraza, piscina, salón, restaurante, hotel),
+cada uno con 9–82 variantes. No es 3D: es **una foto renderizada** con marcadores sobre la imagen para cada zona
+(en un baño: Pavimento, Fondo, Lavamanos). Al elegir un material se carga otra imagen ya generada
+(`storage/generated/<espacio>/cropped/….png`; por el nombre, las variantes se generan con IA y se guardan).
+- Primera vez: cartel de 3 pasos ("Toca las zonas · Elige un material · Guarda tu combinación") y botón Empezar.
+- Por zona: "Fondo 2/3", flechas y "Siguiente zona: Lavamanos"; materiales con foto, nombre y tipo/serie
+  (CEMENTO · BOTTEGA, PIEDRA · CORAL, MÁRMOL · TARANTO) y **Filtros**.
+- Guardar, Compartir, **PDF** y Descargar; "Mi área" con las combinaciones guardadas (pide cuenta para guardar).
+- Aviso fijo: "Los colores y texturas son orientativos". El "Panel" es para administradores (bloqueado por el firewall).
+- **Lo que no tiene**: medidas propias, cantidades, cajas, precios, presupuesto ni plan de obra. Solo sirve para inspirarse.
+  La "Visita 360°" (`/virtual-showrooms`) son recorridos de sus showrooms.
+
+### Ideas para Lambert
+| Idea | Estado |
+|---|---|
+| **Ambientes fotorrealistas** sin tarjeta de video: fotos de baños con cada zona marcada (piso, pared, franja) y la cerámica elegida puesta en perspectiva sobre la foto, con las sombras de la foto encima. Se ve como foto en cualquier equipo (resuelve que la "Foto realista" se congele en equipos viejos) | Propuesta |
+| Marcadores sobre la vista para elegir zona (tocar la pared o el piso en lugar de buscar la pestaña) | Propuesta |
+| Cartel de 3 pasos la primera vez que se abre el diseñador | Propuesta |
+| "Siguiente zona" después de elegir cerámica (piso → paredes → franja) | Propuesta |
+| Aviso "Los colores y texturas son orientativos" en el diseñador y la cotización | Propuesta |
+| Filtro por tipo/serie de material | Ya existe (filtro por subcategoría) |

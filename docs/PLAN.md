@@ -43,7 +43,9 @@ Del fabricante, escaneados con el celular (Polycam, KIRI) o genéricos para empe
   baños en L, franja decorativa (listelo), reflejo real en espejos (calidad Alta) y sedes con stock y precio propios
   (`012-sedes.sql`, **aplicada en la nube**; pestaña 🏬 Sedes en el admin). Pruebas: 18 (correr por archivo, el
   diseñador tarda ~12 min; si el puerto 8091 queda ocupado, cerrar ese `python3`).
-- **Pendiente para la próxima:**
+- **2026-10-31: EN PAUSA hasta que el cliente vea el programa.** No hacer cambios nuevos; lo siguiente se decide con lo que diga el cliente.
+  Versión que se le muestra: commit `577f71c`, publicada en https://kreadu.github.io/Lambert/
+- **Pendiente para después de la revisión del cliente:**
   - **Lo principal: más realismo** (ver "Lo que se quiere"). La idea más fuerte son los **ambientes fotorrealistas**
     de `docs/COMPETENCIA.md` (Porcelanosa SPACES 2.0). El 2026-10-31 se hicieron las ideas fáciles: marcadores de zona,
     tocar el piso o la pared para cambiar la cerámica, cartel de 3 pasos, "Siguiente zona" y el aviso de colores orientativos.
